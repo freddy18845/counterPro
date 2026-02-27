@@ -1,0 +1,5 @@
+class QrInfo {
+
+  String? data;
+
+}

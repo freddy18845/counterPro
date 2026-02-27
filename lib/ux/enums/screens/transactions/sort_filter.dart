@@ -1,0 +1,4 @@
+enum TransactionsSortFilter {
+  sort,
+  filter
+}

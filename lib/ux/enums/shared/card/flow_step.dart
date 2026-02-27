@@ -1,0 +1,4 @@
+enum CardFlowStep {
+  read,
+  pin
+}
