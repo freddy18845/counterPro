@@ -4,6 +4,7 @@ import "package:flutter/material.dart";
 import "../../../res/app_colors.dart";
 import "../../../res/app_strings.dart";
 import "../../../res/app_theme.dart";
+import "../../../utils/sessionManager.dart";
 import "../../../utils/shared/screen.dart";
 import "../shared/base_dailog.dart";
 
@@ -23,6 +24,7 @@ class _LogoutDialogState extends State<LogoutDialog> {
       canPop: false,
       child: DialogBaseLayout(
         title: AppStrings.logoutText,
+        titleSize: 20,
         showCard: true,
         onClose: () {
           Navigator.pop(context);
@@ -33,7 +35,7 @@ class _LogoutDialogState extends State<LogoutDialog> {
             Container(
               width: double.infinity,
               padding: EdgeInsets.symmetric(
-                vertical: ConstantUtil.verticalSpacing/3,
+                vertical: ConstantUtil.verticalSpacing,
               ),
 
               child: Center(
@@ -42,7 +44,7 @@ class _LogoutDialogState extends State<LogoutDialog> {
                   style: AppTheme.textStyle.copyWith(
                     color:Colors.black,
                     fontWeight: FontWeight.normal,
-                    fontSize: (ScreenUtil.width * 0.035).clamp(12, 114),
+                    fontSize: (ScreenUtil.width * 0.035).clamp(12, 14),
                   ),
                 ),
               ),
@@ -86,6 +88,7 @@ class _LogoutDialogState extends State<LogoutDialog> {
                       duration: Duration(milliseconds: 300),
                       child: GestureDetector(
                         onTap: () {
+                          SessionManager().clear();
                           AppNavigator.gotoLogin(context: context);
                         },
                         child: Container(

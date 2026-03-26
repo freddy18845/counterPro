@@ -19,6 +19,7 @@ class _HomeUpperCardState extends State<HomeUpperCard> {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
+      height: ScreenUtil.height * 0.03,
       padding: EdgeInsets.symmetric(
         vertical: ScreenUtil.height * 0.03,
         horizontal: ScreenUtil.width * 0.015,

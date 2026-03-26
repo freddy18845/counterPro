@@ -1,19 +1,14 @@
 import "dart:async";
 import "package:eswaini_destop_app/ux/models/screens/home/flow_item.dart";
-import "package:eswaini_destop_app/ux/models/shared/inventory.dart";
 import "package:eswaini_destop_app/ux/models/shared/pos_transaction.dart";
-import "package:eswaini_destop_app/ux/models/shared/product.dart";
 import "package:eswaini_destop_app/ux/models/shared/sale_order.dart";
 import "package:eswaini_destop_app/ux/res/app_strings.dart";
 import "package:flutter/cupertino.dart";
 import "package:flutter/material.dart";
 import "package:flutter_animate/flutter_animate.dart";
-import "package:flutter_bloc/flutter_bloc.dart";
 import "package:isar/isar.dart";
 import "../../../platform/utils/constant.dart";
 import "../../../platform/utils/isar_manager.dart";
-import "../../blocs/screens/withdrawal/bloc.dart";
-import "../../enums/screens/payment/flow_step.dart";
 import "../../res/app_colors.dart";
 import "../../utils/export_service.dart";
 import "../../utils/shared/screen.dart";
@@ -62,12 +57,11 @@ class TopProduct {
 
 class ReportScreen extends StatefulWidget {
   final HomeFlowItem selectedTransaction;
-  final StreamController<Map> refreshController;
+
 
   const ReportScreen({
     super.key,
     required this.selectedTransaction,
-    required this.refreshController,
   });
 
   @override
@@ -75,7 +69,6 @@ class ReportScreen extends StatefulWidget {
 }
 
 class _ReportScreenState extends State<ReportScreen> {
-  late WithdrawalBloc withdrawalBloc;
   final isar = IsarService.db;
 
   ReportPeriod _period = ReportPeriod.thisMonth;
@@ -98,20 +91,11 @@ class _ReportScreenState extends State<ReportScreen> {
   @override
   void initState() {
     super.initState();
-    withdrawalBloc = context.read<WithdrawalBloc>();
-    withdrawalBloc.init(
-      context: context,
-      data: widget.selectedTransaction,
-      refreshController: widget.refreshController,
-    );
     _loadData();
   }
 
   @override
   void dispose() {
-    try {
-      withdrawalBloc.dispose();
-    } catch (_) {}
     super.dispose();
   }
 
@@ -378,984 +362,974 @@ class _ReportScreenState extends State<ReportScreen> {
   Widget build(BuildContext context) {
     return BaseTemplate(
       isProcessing: _isLoading,
-      contentSection: BlocBuilder<WithdrawalBloc, WithdrawalState>(
-        builder: (context, WithdrawalState state) {
-          if (state is! WithdrawalEnterAmountState) {
-            return const SizedBox();
-          }
-          withdrawalBloc.activeStep =
-              GeneralTransactionFlowStep.enterAmount;
+      contentSection:CustomCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(height: ConstantUtil.verticalSpacing / 2),
 
-          return CustomCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            InlineText(
+                title: widget.selectedTransaction.text
+                    .toUpperCase()),
+
+            Row(
               children: [
-                SizedBox(height: ConstantUtil.verticalSpacing / 2),
-
-                InlineText(
-                    title: widget.selectedTransaction.text
-                        .toUpperCase()),
-
-                Row(
-                  children: [
-                    // period selector
-                    ...[
-                      ReportPeriod.today,
-                      ReportPeriod.thisWeek,
-                      ReportPeriod.thisMonth,
-                      ReportPeriod.custom,
-                    ].map((p) {
-                      final isActive = _period == p;
-                      final label = switch (p) {
-                        ReportPeriod.today => 'Today',
-                        ReportPeriod.thisWeek => 'This Week',
-                        ReportPeriod.thisMonth => 'This Month',
-                        ReportPeriod.custom => 'Custom',
-                      };
-                      return GestureDetector(
-                        onTap: () {
-                          setState(() => _period = p);
-                          if (p == ReportPeriod.custom) {
-                            _pickCustomDate(isStart: true);
-                          } else {
-                            _loadData(); // ← load real data
-                          }
-                        },
-                        child: AnimatedContainer(
-                          duration:
-                          const Duration(milliseconds: 200),
-                          margin: const EdgeInsets.only(left: 6),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 7),
-                          decoration: BoxDecoration(
-                            color: isActive
-                                ? AppColors.primaryColor
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: isActive
-                                  ? AppColors.primaryColor
-                                  : Colors.grey,
-                            ),
-                          ),
-                          child: Text(
-                            label,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: isActive
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
-                              color: isActive
-                                  ? Colors.white
-                                  : Colors.grey,
-                            ),
-                          ),
+                // period selector
+                ...[
+                  ReportPeriod.today,
+                  ReportPeriod.thisWeek,
+                  ReportPeriod.thisMonth,
+                  ReportPeriod.custom,
+                ].map((p) {
+                  final isActive = _period == p;
+                  final label = switch (p) {
+                    ReportPeriod.today => 'Today',
+                    ReportPeriod.thisWeek => 'This Week',
+                    ReportPeriod.thisMonth => 'This Month',
+                    ReportPeriod.custom => 'Custom',
+                  };
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() => _period = p);
+                      if (p == ReportPeriod.custom) {
+                        _pickCustomDate(isStart: true);
+                      } else {
+                        _loadData(); // ← load real data
+                      }
+                    },
+                    child: AnimatedContainer(
+                      duration:
+                      const Duration(milliseconds: 200),
+                      margin: const EdgeInsets.only(left: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: isActive
+                            ? AppColors.primaryColor
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isActive
+                              ? AppColors.primaryColor
+                              : Colors.grey,
                         ),
-                      );
-                    }),
-
-                    if (_period == ReportPeriod.custom) ...[
-                      const SizedBox(
-                        height: 30,
-                        child: VerticalDivider(thickness: 1),
                       ),
-                      Row(
-                        children: [
-                          DateBtn(
-                            label: _customStart == null
-                                ? 'Start Date'
-                                : _formatDate(_customStart!),
-                            isSet: _customStart != null,
-                            onTap: () =>
-                                _pickCustomDate(isStart: true),
-                          ),
-                          const SizedBox(width: 8),
-                          DateBtn(
-                            label: _customEnd == null
-                                ? 'End Date'
-                                : _formatDate(_customEnd!),
-                            isSet: _customEnd != null,
-                            onTap: () =>
-                                _pickCustomDate(isStart: false),
-                          ),
-                        ],
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: isActive
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: isActive
+                              ? Colors.white
+                              : Colors.grey,
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+
+                if (_period == ReportPeriod.custom) ...[
+                  const SizedBox(
+                    height: 30,
+                    child: VerticalDivider(thickness: 1),
+                  ),
+                  Row(
+                    children: [
+                      DateBtn(
+                        label: _customStart == null
+                            ? 'Start Date'
+                            : _formatDate(_customStart!),
+                        isSet: _customStart != null,
+                        onTap: () =>
+                            _pickCustomDate(isStart: true),
+                      ),
+                      const SizedBox(width: 8),
+                      DateBtn(
+                        label: _customEnd == null
+                            ? 'End Date'
+                            : _formatDate(_customEnd!),
+                        isSet: _customEnd != null,
+                        onTap: () =>
+                            _pickCustomDate(isStart: false),
                       ),
                     ],
+                  ),
+                ],
 
-                    const Spacer(),
+                const Spacer(),
 
-                    // refresh button
-                    GestureDetector(
-                      onTap: _isLoading ? null : _loadData,
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 7),
-                        margin: const EdgeInsets.only(right: 8),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryColor
-                              .withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: AppColors.primaryColor
-                                .withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: _isLoading
-                            ? SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppColors.primaryColor,
-                          ),
-                        )
-                            : Icon(
-                          Icons.refresh_outlined,
-                          size: 16,
-                          color: AppColors.primaryColor,
-                        ),
+                // refresh button
+                GestureDetector(
+                  onTap: _isLoading ? null : _loadData,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 7),
+                    margin: const EdgeInsets.only(right: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryColor
+                          .withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: AppColors.primaryColor
+                            .withValues(alpha: 0.3),
                       ),
                     ),
-
-                    if (_isExporting)
-                      const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2),
-                      )
-                    else
-                      Row(
-                        children: [
-                          CustomActionButton(
-                            onTap: _exportExcel,
-                            label: 'Excel',
-                            color: const Color(0xFF1D6F42),
-                            icon: ExcelIconPainter(),
-                          ),
-                          const SizedBox(width: 6),
-                          CustomActionButton(
-                            onTap: _exportWord,
-                            label: 'Word',
-                            color: const Color(0xFF2B579A),
-                            icon: WordIconPainter(),
-                          ),
-                        ],
+                    child: _isLoading
+                        ? SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.primaryColor,
                       ),
-                  ],
-                ),
-
-                Divider(
-                    thickness: 1.5,
-                    color: AppColors.secondaryColor),
-                SizedBox(height: ConstantUtil.verticalSpacing / 2),
-
-                // ── Content ───────────────────────────────────
-                Expanded(
-                  child: _isLoading
-                      ? Center(
-                    child: Column(
-                      mainAxisAlignment:
-                      MainAxisAlignment.center,
-                      children: [
-                        CupertinoActivityIndicator(radius: 18, color: Colors.green),
-                        const SizedBox(height: 12),
-                        const Text(AppStrings.fetchingTransactions,
-                            style: TextStyle(
-                                color: Colors.grey,
-                                fontSize: 13)),
-                      ],
-                    ),
-                  )
-                      : _totalOrders == 0
-                      ? Center(
-                    child: Column(
-                      mainAxisAlignment:
-                      MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.bar_chart_outlined,
-                          size: 64,
-                          color: Colors.grey
-                              .withValues(alpha: 0.4),
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'No completed orders found',
-                          style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'Try a different date range',
-                          style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  )
-                      : SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment:
-                      CrossAxisAlignment.start,
-                      children: [
-                        // ── Summary cards ──────────
-                        Row(
-                          children: _summaries.map((s) {
-                            return Expanded(
-                              child: Container(
-                                margin: EdgeInsets.only(
-                                  right: _summaries.last ==
-                                      s
-                                      ? 0
-                                      : ScreenUtil.width *
-                                      0.01,
-                                ),
-                                padding:
-                                const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: s.color.withValues(
-                                      alpha: 0.07),
-                                  borderRadius:
-                                  BorderRadius.circular(
-                                      12),
-                                  border: Border.all(
-                                      color: s.color
-                                          .withValues(
-                                          alpha: 0.2)),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment:
-                                  CrossAxisAlignment
-                                      .start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                      MainAxisAlignment
-                                          .spaceBetween,
-                                      children: [
-                                        Container(
-                                          width: 36,
-                                          height: 36,
-                                          decoration:
-                                          BoxDecoration(
-                                            color: s.color
-                                                .withValues(
-                                                alpha:
-                                                0.15),
-                                            borderRadius:
-                                            BorderRadius
-                                                .circular(
-                                                8),
-                                          ),
-                                          child: Icon(
-                                              s.icon,
-                                              color: s.color,
-                                              size: 18),
-                                        ),
-                                        Text(
-                                          s.label ==
-                                              'Gross Profit'
-                                              ? '${((_grossProfit / _totalRevenue) * 100).toStringAsFixed(1)}%'
-                                              : '${s.count} orders',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: s.color
-                                                .withValues(
-                                                alpha:
-                                                0.7),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 10),
-                                    Text(
-                                      '\$${s.amount.toStringAsFixed(2)}',
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight:
-                                        FontWeight.bold,
-                                        color: s.color,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(s.label,
-                                        style: const TextStyle(
-                                            fontSize: 12,
-                                            color:
-                                            Colors.grey)),
-                                  ],
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ).animate()
-// 1. Wait slightly so it appears after the initial screen load
-                .fadeIn(delay: 300.ms, duration:
-                600.ms)
-// 2. Gently slide down from the top (using slideY with a negative begin)
-                .slideY(begin: -0.1, end: 0, curve: Curves.easeOutCubic)
-// 3. Optional: add a slight blur-to-clear effect for a premium look
-                .blur(begin: const Offset(10, 10), end: Offset.zero),
-
-                        SizedBox(
-                            height: ConstantUtil
-                                .verticalSpacing /
-                                2),
-
-                        // ── Charts row ─────────────
-                        Row(
-                          crossAxisAlignment:
-                          CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              flex: 3,
-                              child: Container(
-                                padding:
-                                const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius:
-                                  BorderRadius.circular(
-                                      12),
-                                  border: Border.all(
-                                      color: Colors.grey
-                                          .withValues(
-                                          alpha: 0.15)),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment:
-                                  CrossAxisAlignment
-                                      .start,
-                                  children: [
-                                    const Text('Daily Sales',
-                                        style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight:
-                                            FontWeight
-                                                .bold,
-                                            color: Colors
-                                                .black87)),
-                                    const SizedBox(height: 4),
-                                    Text('Last 7 days',
-                                        style: TextStyle(
-                                            fontSize: 11,
-                                            color: Colors.grey
-                                                .withValues(
-                                                alpha:
-                                                0.7))),
-                                    const SizedBox(
-                                        height: 16),
-                                    SizedBox(
-                                      height: 160,
-                                      child: BarChart(
-                                          data: _dailySales),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ).animate()
-// 1. Wait slightly so it appears after the initial screen load
-                                .fadeIn(delay: 300.ms, duration:
-                            600.ms)
-// 2. Gently slide down from the top (using slideY with a negative begin)
-                                .slideY(begin: -0.1, end: 0, curve: Curves.easeOutCubic)
-// 3. Optional: add a slight blur-to-clear effect for a premium look
-                                .blur(begin: const Offset(10, 10), end: Offset.zero),
-                            SizedBox(
-                                width:
-                                ScreenUtil.width * 0.015),
-                            Expanded(
-                              flex: 2,
-                              child: Container(
-                                padding:
-                                const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius:
-                                  BorderRadius.circular(
-                                      12),
-                                  border: Border.all(
-                                      color: Colors.grey
-                                          .withValues(
-                                          alpha: 0.15)),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment:
-                                  CrossAxisAlignment
-                                      .start,
-                                  children: [
-                                    const Text(
-                                        'Payment Methods',
-                                        style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight:
-                                            FontWeight
-                                                .bold,
-                                            color: Colors
-                                                .black87)),
-                                    const SizedBox(
-                                        height: 16),
-                                    _paymentBreakdown.isEmpty
-                                        ? const Center(
-                                        child: Text(
-                                            'No payment data',
-                                            style: TextStyle(
-                                                color: Colors
-                                                    .grey,
-                                                fontSize:
-                                                12)))
-                                        : SizedBox(
-                                      height: 120,
-                                      child: DonutChart(
-                                          data:
-                                          _paymentBreakdown,
-                                          total:
-                                          _totalRevenue),
-                                    ),
-                                    const SizedBox(
-                                        height: 12),
-                                    ..._paymentBreakdown
-                                        .map((p) {
-                                      final pct = _totalRevenue >
-                                          0
-                                          ? (p.amount /
-                                          _totalRevenue *
-                                          100)
-                                          .toStringAsFixed(
-                                          1)
-                                          : '0.0';
-                                      return Padding(
-                                        padding:
-                                        const EdgeInsets
-                                            .only(
-                                            bottom: 6),
-                                        child: Row(
-                                          children: [
-                                            Container(
-                                              width: 10,
-                                              height: 10,
-                                              decoration:
-                                              BoxDecoration(
-                                                color: p.color,
-                                                borderRadius:
-                                                BorderRadius
-                                                    .circular(
-                                                    2),
-                                              ),
-                                            ),
-                                            const SizedBox(
-                                                width: 8),
-                                            Expanded(
-                                                child: Text(
-                                                    p.method,
-                                                    style: const TextStyle(
-                                                        fontSize:
-                                                        12))),
-                                            Text('$pct%',
-                                                style: TextStyle(
-                                                    fontSize:
-                                                    12,
-                                                    fontWeight:
-                                                    FontWeight
-                                                        .w600,
-                                                    color: p
-                                                        .color)),
-                                            const SizedBox(
-                                                width: 8),
-                                            Text(
-                                                '${ConstantUtil.currencySymbol} ${p.amount.toStringAsFixed(0)}',
-                                                style: const TextStyle(
-                                                    fontSize:
-                                                    11,
-                                                    color: Colors
-                                                        .grey)),
-                                          ],
-                                        ),
-                                      );
-                                    }),
-                                  ],
-                                ),
-                              ),
-                            ).animate()
-// 1. Wait slightly so it appears after the initial screen load
-                                .fadeIn(delay: 300.ms, duration:
-                            600.ms)
-// 2. Gently slide down from the top (using slideY with a negative begin)
-                                .slideY(begin: -0.1, end: 0, curve: Curves.easeOutCubic)
-// 3. Optional: add a slight blur-to-clear effect for a premium look
-                                .blur(begin: const Offset(10, 10), end: Offset.zero),
-                          ],
-                        ),
-
-                        SizedBox(
-                            height: ConstantUtil
-                                .verticalSpacing /
-                                2),
-
-                        // ── Bottom row ──────────────
-                        Row(
-                          crossAxisAlignment:
-                          CrossAxisAlignment.start,
-                          children: [
-                            // top products
-                            Expanded(
-                              flex: 3,
-                              child: Container(
-                                padding:
-                                const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius:
-                                  BorderRadius.circular(
-                                      12),
-                                  border: Border.all(
-                                      color: Colors.grey
-                                          .withValues(
-                                          alpha: 0.15)),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment:
-                                  CrossAxisAlignment
-                                      .start,
-                                  children: [
-                                    const Text(
-                                        'Top Products by Revenue',
-                                        style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight:
-                                            FontWeight
-                                                .bold,
-                                            color: Colors
-                                                .black87)),
-                                    const SizedBox(
-                                        height: 12),
-                                    Container(
-                                      padding: const EdgeInsets
-                                          .symmetric(
-                                          horizontal: 12,
-                                          vertical: 8),
-                                      decoration: BoxDecoration(
-                                        color: AppColors
-                                            .primaryColor
-                                            .withValues(
-                                            alpha: 0.08),
-                                        borderRadius:
-                                        BorderRadius
-                                            .circular(6),
-                                      ),
-                                      child: const Row(
-                                        children: [
-                                          Expanded(
-                                              flex: 2,
-                                              child: Text(
-                                                  'Product',
-                                                  style: TextStyle(
-                                                      fontSize:
-                                                      12,
-                                                      fontWeight:
-                                                      FontWeight
-                                                          .bold))),
-                                          Expanded(
-                                              child: Text(
-                                                  'SKU',
-                                                  style: TextStyle(
-                                                      fontSize:
-                                                      12,
-                                                      fontWeight:
-                                                      FontWeight
-                                                          .bold))),
-                                          Expanded(
-                                              child: Text(
-                                                  'Qty Sold',
-                                                  textAlign:
-                                                  TextAlign
-                                                      .center,
-                                                  style: TextStyle(
-                                                      fontSize:
-                                                      12,
-                                                      fontWeight:
-                                                      FontWeight
-                                                          .bold))),
-                                          Expanded(
-                                              child: Text(
-                                                  'Revenue',
-                                                  textAlign:
-                                                  TextAlign
-                                                      .right,
-                                                  style: TextStyle(
-                                                      fontSize:
-                                                      12,
-                                                      fontWeight:
-                                                      FontWeight
-                                                          .bold))),
-                                        ],
-                                      ),
-                                    ),
-                                    _topProducts.isEmpty
-                                        ? const Padding(
-                                      padding: EdgeInsets
-                                          .all(16),
-                                      child: Center(
-                                          child: Text(
-                                              'No product data',
-                                              style: TextStyle(
-                                                  color: Colors
-                                                      .grey,
-                                                  fontSize:
-                                                  12))),
-                                    )
-                                        : Column(
-                                      children: _topProducts
-                                          .asMap()
-                                          .entries
-                                          .map((e) {
-                                        final index =
-                                            e.key;
-                                        final p = e.value;
-                                        final maxRevenue =
-                                            _topProducts
-                                                .first
-                                                .revenue;
-                                        final barWidth =
-                                        maxRevenue > 0
-                                            ? p.revenue /
-                                            maxRevenue
-                                            : 0.0;
-
-                                        return Container(
-                                          padding: const EdgeInsets
-                                              .symmetric(
-                                              horizontal:
-                                              12,
-                                              vertical:
-                                              8),
-                                          decoration:
-                                          BoxDecoration(
-                                            color: index.isOdd
-                                                ? Colors.grey.withValues(
-                                                alpha:
-                                                0.03)
-                                                : Colors
-                                                .transparent,
-                                            border: Border(
-                                              bottom:
-                                              BorderSide(
-                                                color: Colors
-                                                    .grey
-                                                    .withValues(
-                                                    alpha:
-                                                    0.1),
-                                              ),
-                                            ),
-                                          ),
-                                          child: Column(
-                                            children: [
-                                              Row(
-                                                children: [
-                                                  Expanded(
-                                                    flex:
-                                                    2,
-                                                    child:
-                                                    Row(
-                                                      children: [
-                                                        Container(
-                                                          width:
-                                                          22,
-                                                          height:
-                                                          22,
-                                                          decoration: BoxDecoration(
-                                                            color: index < 3 ? AppColors.primaryColor : Colors.grey.withValues(alpha: 0.2),
-                                                            borderRadius: BorderRadius.circular(4),
-                                                          ),
-                                                          child:
-                                                          Center(
-                                                            child:
-                                                            Text(
-                                                              '${index + 1}',
-                                                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: index < 3 ? Colors.white : Colors.grey),
-                                                            ),
-                                                          ),
-                                                        ),
-                                                        const SizedBox(
-                                                            width:
-                                                            8),
-                                                        Expanded(
-                                                          child:
-                                                          Text(
-                                                            p.name,
-                                                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-                                                            overflow:
-                                                            TextOverflow.ellipsis,
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                  Expanded(
-                                                      child: Text(
-                                                          p.sku,
-                                                          style: const TextStyle(
-                                                              fontSize: 11,
-                                                              color: Colors.grey))),
-                                                  Expanded(
-                                                    child: Text(
-                                                        '${p.qtySold}',
-                                                        textAlign: TextAlign
-                                                            .center,
-                                                        style: const TextStyle(
-                                                            fontSize:
-                                                            12)),
-                                                  ),
-                                                  Expanded(
-                                                    child: Text(
-                                                        '\$${p.revenue.toStringAsFixed(2)}',
-                                                        textAlign: TextAlign
-                                                            .right,
-                                                        style: TextStyle(
-                                                            fontSize: 12,
-                                                            fontWeight: FontWeight.bold,
-                                                            color: AppColors.primaryColor)),
-                                                  ),
-                                                ],
-                                              ),
-                                              const SizedBox(
-                                                  height:
-                                                  4),
-                                              LayoutBuilder(
-                                                builder: (context,
-                                                    constraints) {
-                                                  return Align(
-                                                    alignment:
-                                                    Alignment
-                                                        .centerLeft,
-                                                    child:
-                                                    Container(
-                                                      width: constraints.maxWidth *
-                                                          barWidth,
-                                                      height:
-                                                      3,
-                                                      decoration:
-                                                      BoxDecoration(
-                                                        color: AppColors
-                                                            .primaryColor
-                                                            .withValues(alpha: 0.4),
-                                                        borderRadius:
-                                                        BorderRadius.circular(2),
-                                                      ),
-                                                    ),
-                                                  );
-                                                },
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                      }).toList(),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ).animate()
-// 1. Wait slightly so it appears after the initial screen load
-                                .fadeIn(delay: 300.ms, duration:
-                            600.ms)
-// 2. Gently slide down from the top (using slideY with a negative begin)
-                                .slideY(begin: -0.1, end: 0, curve: Curves.easeOutCubic)
-// 3. Optional: add a slight blur-to-clear effect for a premium look
-                                .blur(begin: const Offset(10, 10), end: Offset.zero),
-
-                            SizedBox(
-                                width:
-                                ScreenUtil.width * 0.015),
-
-                            // right column
-                            Expanded(
-                              flex: 2,
-                              child: Column(
-                                children: [
-                                  // quick stats
-                                  Container(
-                                    padding:
-                                    const EdgeInsets.all(
-                                        16),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius:
-                                      BorderRadius.circular(
-                                          12),
-                                      border: Border.all(
-                                          color: Colors.grey
-                                              .withValues(
-                                              alpha: 0.15)),
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                      CrossAxisAlignment
-                                          .start,
-                                      children: [
-                                        const Text(
-                                            'Quick Stats',
-                                            style: TextStyle(
-                                                fontSize: 14,
-                                                fontWeight:
-                                                FontWeight
-                                                    .bold,
-                                                color: Colors
-                                                    .black87)),
-                                        const SizedBox(
-                                            height: 12),
-                                        StatRow(
-                                          label: 'Total Orders',
-                                          value:
-                                          '$_totalOrders',
-                                          icon: Icons
-                                              .receipt_long_outlined,
-                                          color: AppColors
-                                              .primaryColor,
-                                        ),
-                                        StatRow(
-                                          label: 'Items Sold',
-                                          value:
-                                          '$_totalItemsSold',
-                                          icon: Icons
-                                              .inventory_2_outlined,
-                                          color: Colors.orange,
-                                        ),
-                                        StatRow(
-                                          label:
-                                          'Profit Margin',
-                                          value: _totalRevenue >
-                                              0
-                                              ? '${((_grossProfit / _totalRevenue) * 100).toStringAsFixed(1)}%'
-                                              : '0.0%',
-                                          icon: Icons
-                                              .pie_chart_outline,
-                                          color: Colors.green,
-                                        ),
-                                        StatRow(
-                                          label:
-                                          'Avg Items/Order',
-                                          value: _totalOrders >
-                                              0
-                                              ? '${(_totalItemsSold / _totalOrders).toStringAsFixed(1)}'
-                                              : '0.0',
-                                          icon: Icons
-                                              .shopping_cart_outlined,
-                                          color: Colors.purple,
-                                        ),
-                                        StatRow(
-                                          label: 'Best Day',
-                                          value: _dailySales
-                                              .every((d) =>
-                                          d.amount ==
-                                              0)
-                                              ? 'N/A'
-                                              : _formatDate(
-                                              _dailySales
-                                                  .reduce((a,
-                                                  b) =>
-                                              a.amount >
-                                                  b.amount
-                                                  ? a
-                                                  : b)
-                                                  .date),
-                                          icon:
-                                          Icons.star_outline,
-                                          color: Colors.amber,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-
-                                  SizedBox(
-                                      height: ConstantUtil
-                                          .verticalSpacing /
-                                          2),
-
-                                  // revenue vs cost
-                                  Container(
-                                    padding:
-                                    const EdgeInsets.all(
-                                        16),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius:
-                                      BorderRadius.circular(
-                                          12),
-                                      border: Border.all(
-                                          color: Colors.grey
-                                              .withValues(
-                                              alpha: 0.15)),
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                      CrossAxisAlignment
-                                          .start,
-                                      children: [
-                                        const Text(
-                                            'Revenue vs Cost',
-                                            style: TextStyle(
-                                                fontSize: 14,
-                                                fontWeight:
-                                                FontWeight
-                                                    .bold,
-                                                color: Colors
-                                                    .black87)),
-                                        const SizedBox(
-                                            height: 12),
-                                        ProgressBar(
-                                          label: 'Revenue',
-                                          value: _totalRevenue,
-                                          max: _totalRevenue,
-                                          color: AppColors
-                                              .primaryColor,
-                                        ),
-                                        const SizedBox(
-                                            height: 8),
-                                        ProgressBar(
-                                          label: 'Cost',
-                                          value: _totalCost,
-                                          max: _totalRevenue,
-                                          color: Colors.orange,
-                                        ),
-                                        const SizedBox(
-                                            height: 8),
-                                        ProgressBar(
-                                          label: 'Profit',
-                                          value: _grossProfit,
-                                          max: _totalRevenue,
-                                          color: Colors.green,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ).animate()
-// 1. Wait slightly so it appears after the initial screen load
-                                .fadeIn(delay: 300.ms, duration:
-                            600.ms)
-// 2. Gently slide down from the top (using slideY with a negative begin)
-                                .slideY(begin: -0.1, end: 0, curve: Curves.easeOutCubic)
-// 3. Optional: add a slight blur-to-clear effect for a premium look
-                                .blur(begin: const Offset(10, 10), end: Offset.zero),
-                          ],
-                        ),
-
-                        SizedBox(
-                            height:
-                            ConstantUtil.verticalSpacing),
-                      ],
+                    )
+                        : Icon(
+                      Icons.refresh_outlined,
+                      size: 16,
+                      color: AppColors.primaryColor,
                     ),
                   ),
                 ),
+
+                if (_isExporting)
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2),
+                  )
+                else
+                  Row(
+                    children: [
+                      CustomActionButton(
+                        onTap: _exportExcel,
+                        label: 'Excel',
+                        color: const Color(0xFF1D6F42),
+                        icon: ExcelIconPainter(),
+                      ),
+                      const SizedBox(width: 6),
+                      CustomActionButton(
+                        onTap: _exportWord,
+                        label: 'Word',
+                        color: const Color(0xFF2B579A),
+                        icon: WordIconPainter(),
+                      ),
+                    ],
+                  ),
               ],
             ),
-          );
-        },
+
+            Divider(
+                thickness: 1.5,
+                color: AppColors.secondaryColor),
+            SizedBox(height: ConstantUtil.verticalSpacing / 2),
+
+            // ── Content ───────────────────────────────────
+            Expanded(
+              child: _isLoading
+                  ? Center(
+                child: Column(
+                  mainAxisAlignment:
+                  MainAxisAlignment.center,
+                  children: [
+                    CupertinoActivityIndicator(radius: 18, color: Colors.green),
+                    const SizedBox(height: 12),
+                    const Text(AppStrings.fetchingTransactions,
+                        style: TextStyle(
+                            color: Colors.grey,
+                            fontSize: 13)),
+                  ],
+                ),
+              )
+                  : _totalOrders == 0
+                  ? Center(
+                child: Column(
+                  mainAxisAlignment:
+                  MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.bar_chart_outlined,
+                      size: 64,
+                      color: Colors.grey
+                          .withValues(alpha: 0.4),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'No completed orders found',
+                      style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Try a different date range',
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey),
+                    ),
+                  ],
+                ),
+              )
+                  : SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment:
+                  CrossAxisAlignment.start,
+                  children: [
+                    // ── Summary cards ──────────
+                    Row(
+                      children: _summaries.map((s) {
+                        return Expanded(
+                          child: Container(
+                            margin: EdgeInsets.only(
+                              right: _summaries.last ==
+                                  s
+                                  ? 0
+                                  : ScreenUtil.width *
+                                  0.01,
+                            ),
+                            padding:
+                            const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: s.color.withValues(
+                                  alpha: 0.07),
+                              borderRadius:
+                              BorderRadius.circular(
+                                  12),
+                              border: Border.all(
+                                  color: s.color
+                                      .withValues(
+                                      alpha: 0.2)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment:
+                              CrossAxisAlignment
+                                  .start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment:
+                                  MainAxisAlignment
+                                      .spaceBetween,
+                                  children: [
+                                    Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration:
+                                      BoxDecoration(
+                                        color: s.color
+                                            .withValues(
+                                            alpha:
+                                            0.15),
+                                        borderRadius:
+                                        BorderRadius
+                                            .circular(
+                                            8),
+                                      ),
+                                      child: Icon(
+                                          s.icon,
+                                          color: s.color,
+                                          size: 18),
+                                    ),
+                                    Text(
+                                      s.label ==
+                                          'Gross Profit'
+                                          ? '${((_grossProfit / _totalRevenue) * 100).toStringAsFixed(1)}%'
+                                          : '${s.count} orders',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: s.color
+                                            .withValues(
+                                            alpha:
+                                            0.7),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  '\$${s.amount.toStringAsFixed(2)}',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight:
+                                    FontWeight.bold,
+                                    color: s.color,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(s.label,
+                                    style: const TextStyle(
+                                        fontSize: 12,
+                                        color:
+                                        Colors.grey)),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ).animate()
+// 1. Wait slightly so it appears after the initial screen load
+                        .fadeIn(delay: 300.ms, duration:
+                    600.ms)
+// 2. Gently slide down from the top (using slideY with a negative begin)
+                        .slideY(begin: -0.1, end: 0, curve: Curves.easeOutCubic)
+// 3. Optional: add a slight blur-to-clear effect for a premium look
+                        .blur(begin: const Offset(10, 10), end: Offset.zero),
+
+                    SizedBox(
+                        height: ConstantUtil
+                            .verticalSpacing /
+                            2),
+
+                    // ── Charts row ─────────────
+                    Row(
+                      crossAxisAlignment:
+                      CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: Container(
+                            padding:
+                            const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius:
+                              BorderRadius.circular(
+                                  12),
+                              border: Border.all(
+                                  color: Colors.grey
+                                      .withValues(
+                                      alpha: 0.15)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment:
+                              CrossAxisAlignment
+                                  .start,
+                              children: [
+                                const Text('Daily Sales',
+                                    style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight:
+                                        FontWeight
+                                            .bold,
+                                        color: Colors
+                                            .black87)),
+                                const SizedBox(height: 4),
+                                Text('Last 7 days',
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey
+                                            .withValues(
+                                            alpha:
+                                            0.7))),
+                                const SizedBox(
+                                    height: 16),
+                                SizedBox(
+                                  height: 160,
+                                  child: BarChart(
+                                      data: _dailySales),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ).animate()
+// 1. Wait slightly so it appears after the initial screen load
+                            .fadeIn(delay: 300.ms, duration:
+                        600.ms)
+// 2. Gently slide down from the top (using slideY with a negative begin)
+                            .slideY(begin: -0.1, end: 0, curve: Curves.easeOutCubic)
+// 3. Optional: add a slight blur-to-clear effect for a premium look
+                            .blur(begin: const Offset(10, 10), end: Offset.zero),
+                        SizedBox(
+                            width:
+                            ScreenUtil.width * 0.015),
+                        Expanded(
+                          flex: 2,
+                          child: Container(
+                            padding:
+                            const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius:
+                              BorderRadius.circular(
+                                  12),
+                              border: Border.all(
+                                  color: Colors.grey
+                                      .withValues(
+                                      alpha: 0.15)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment:
+                              CrossAxisAlignment
+                                  .start,
+                              children: [
+                                const Text(
+                                    'Payment Methods',
+                                    style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight:
+                                        FontWeight
+                                            .bold,
+                                        color: Colors
+                                            .black87)),
+                                const SizedBox(
+                                    height: 16),
+                                _paymentBreakdown.isEmpty
+                                    ? const Center(
+                                    child: Text(
+                                        'No payment data',
+                                        style: TextStyle(
+                                            color: Colors
+                                                .grey,
+                                            fontSize:
+                                            12)))
+                                    : SizedBox(
+                                  height: 120,
+                                  child: DonutChart(
+                                      data:
+                                      _paymentBreakdown,
+                                      total:
+                                      _totalRevenue),
+                                ),
+                                const SizedBox(
+                                    height: 12),
+                                ..._paymentBreakdown
+                                    .map((p) {
+                                  final pct = _totalRevenue >
+                                      0
+                                      ? (p.amount /
+                                      _totalRevenue *
+                                      100)
+                                      .toStringAsFixed(
+                                      1)
+                                      : '0.0';
+                                  return Padding(
+                                    padding:
+                                    const EdgeInsets
+                                        .only(
+                                        bottom: 6),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 10,
+                                          height: 10,
+                                          decoration:
+                                          BoxDecoration(
+                                            color: p.color,
+                                            borderRadius:
+                                            BorderRadius
+                                                .circular(
+                                                2),
+                                          ),
+                                        ),
+                                        const SizedBox(
+                                            width: 8),
+                                        Expanded(
+                                            child: Text(
+                                                p.method,
+                                                style: const TextStyle(
+                                                    fontSize:
+                                                    12))),
+                                        Text('$pct%',
+                                            style: TextStyle(
+                                                fontSize:
+                                                12,
+                                                fontWeight:
+                                                FontWeight
+                                                    .w600,
+                                                color: p
+                                                    .color)),
+                                        const SizedBox(
+                                            width: 8),
+                                        Text(
+                                            '${ConstantUtil.currencySymbol} ${p.amount.toStringAsFixed(0)}',
+                                            style: const TextStyle(
+                                                fontSize:
+                                                11,
+                                                color: Colors
+                                                    .grey)),
+                                      ],
+                                    ),
+                                  );
+                                }),
+                              ],
+                            ),
+                          ),
+                        ).animate()
+// 1. Wait slightly so it appears after the initial screen load
+                            .fadeIn(delay: 300.ms, duration:
+                        600.ms)
+// 2. Gently slide down from the top (using slideY with a negative begin)
+                            .slideY(begin: -0.1, end: 0, curve: Curves.easeOutCubic)
+// 3. Optional: add a slight blur-to-clear effect for a premium look
+                            .blur(begin: const Offset(10, 10), end: Offset.zero),
+                      ],
+                    ),
+
+                    SizedBox(
+                        height: ConstantUtil
+                            .verticalSpacing /
+                            2),
+
+                    // ── Bottom row ──────────────
+                    Row(
+                      crossAxisAlignment:
+                      CrossAxisAlignment.start,
+                      children: [
+                        // top products
+                        Expanded(
+                          flex: 3,
+                          child: Container(
+                            padding:
+                            const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius:
+                              BorderRadius.circular(
+                                  12),
+                              border: Border.all(
+                                  color: Colors.grey
+                                      .withValues(
+                                      alpha: 0.15)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment:
+                              CrossAxisAlignment
+                                  .start,
+                              children: [
+                                const Text(
+                                    'Top Products by Revenue',
+                                    style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight:
+                                        FontWeight
+                                            .bold,
+                                        color: Colors
+                                            .black87)),
+                                const SizedBox(
+                                    height: 12),
+                                Container(
+                                  padding: const EdgeInsets
+                                      .symmetric(
+                                      horizontal: 12,
+                                      vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: AppColors
+                                        .primaryColor
+                                        .withValues(
+                                        alpha: 0.08),
+                                    borderRadius:
+                                    BorderRadius
+                                        .circular(6),
+                                  ),
+                                  child: const Row(
+                                    children: [
+                                      Expanded(
+                                          flex: 2,
+                                          child: Text(
+                                              'Product',
+                                              style: TextStyle(
+                                                  fontSize:
+                                                  12,
+                                                  fontWeight:
+                                                  FontWeight
+                                                      .bold))),
+                                      Expanded(
+                                          child: Text(
+                                              'SKU',
+                                              style: TextStyle(
+                                                  fontSize:
+                                                  12,
+                                                  fontWeight:
+                                                  FontWeight
+                                                      .bold))),
+                                      Expanded(
+                                          child: Text(
+                                              'Qty Sold',
+                                              textAlign:
+                                              TextAlign
+                                                  .center,
+                                              style: TextStyle(
+                                                  fontSize:
+                                                  12,
+                                                  fontWeight:
+                                                  FontWeight
+                                                      .bold))),
+                                      Expanded(
+                                          child: Text(
+                                              'Revenue',
+                                              textAlign:
+                                              TextAlign
+                                                  .right,
+                                              style: TextStyle(
+                                                  fontSize:
+                                                  12,
+                                                  fontWeight:
+                                                  FontWeight
+                                                      .bold))),
+                                    ],
+                                  ),
+                                ),
+                                _topProducts.isEmpty
+                                    ? const Padding(
+                                  padding: EdgeInsets
+                                      .all(16),
+                                  child: Center(
+                                      child: Text(
+                                          'No product data',
+                                          style: TextStyle(
+                                              color: Colors
+                                                  .grey,
+                                              fontSize:
+                                              12))),
+                                )
+                                    : Column(
+                                  children: _topProducts
+                                      .asMap()
+                                      .entries
+                                      .map((e) {
+                                    final index =
+                                        e.key;
+                                    final p = e.value;
+                                    final maxRevenue =
+                                        _topProducts
+                                            .first
+                                            .revenue;
+                                    final barWidth =
+                                    maxRevenue > 0
+                                        ? p.revenue /
+                                        maxRevenue
+                                        : 0.0;
+
+                                    return Container(
+                                      padding: const EdgeInsets
+                                          .symmetric(
+                                          horizontal:
+                                          12,
+                                          vertical:
+                                          8),
+                                      decoration:
+                                      BoxDecoration(
+                                        color: index.isOdd
+                                            ? Colors.grey.withValues(
+                                            alpha:
+                                            0.03)
+                                            : Colors
+                                            .transparent,
+                                        border: Border(
+                                          bottom:
+                                          BorderSide(
+                                            color: Colors
+                                                .grey
+                                                .withValues(
+                                                alpha:
+                                                0.1),
+                                          ),
+                                        ),
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                flex:
+                                                2,
+                                                child:
+                                                Row(
+                                                  children: [
+                                                    Container(
+                                                      width:
+                                                      22,
+                                                      height:
+                                                      22,
+                                                      decoration: BoxDecoration(
+                                                        color: index < 3 ? AppColors.primaryColor : Colors.grey.withValues(alpha: 0.2),
+                                                        borderRadius: BorderRadius.circular(4),
+                                                      ),
+                                                      child:
+                                                      Center(
+                                                        child:
+                                                        Text(
+                                                          '${index + 1}',
+                                                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: index < 3 ? Colors.white : Colors.grey),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    const SizedBox(
+                                                        width:
+                                                        8),
+                                                    Expanded(
+                                                      child:
+                                                      Text(
+                                                        p.name,
+                                                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                                                        overflow:
+                                                        TextOverflow.ellipsis,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              Expanded(
+                                                  child: Text(
+                                                      p.sku,
+                                                      style: const TextStyle(
+                                                          fontSize: 11,
+                                                          color: Colors.grey))),
+                                              Expanded(
+                                                child: Text(
+                                                    '${p.qtySold}',
+                                                    textAlign: TextAlign
+                                                        .center,
+                                                    style: const TextStyle(
+                                                        fontSize:
+                                                        12)),
+                                              ),
+                                              Expanded(
+                                                child: Text(
+                                                    '\$${p.revenue.toStringAsFixed(2)}',
+                                                    textAlign: TextAlign
+                                                        .right,
+                                                    style: TextStyle(
+                                                        fontSize: 12,
+                                                        fontWeight: FontWeight.bold,
+                                                        color: AppColors.primaryColor)),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(
+                                              height:
+                                              4),
+                                          LayoutBuilder(
+                                            builder: (context,
+                                                constraints) {
+                                              return Align(
+                                                alignment:
+                                                Alignment
+                                                    .centerLeft,
+                                                child:
+                                                Container(
+                                                  width: constraints.maxWidth *
+                                                      barWidth,
+                                                  height:
+                                                  3,
+                                                  decoration:
+                                                  BoxDecoration(
+                                                    color: AppColors
+                                                        .primaryColor
+                                                        .withValues(alpha: 0.4),
+                                                    borderRadius:
+                                                    BorderRadius.circular(2),
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ).animate()
+// 1. Wait slightly so it appears after the initial screen load
+                            .fadeIn(delay: 300.ms, duration:
+                        600.ms)
+// 2. Gently slide down from the top (using slideY with a negative begin)
+                            .slideY(begin: -0.1, end: 0, curve: Curves.easeOutCubic)
+// 3. Optional: add a slight blur-to-clear effect for a premium look
+                            .blur(begin: const Offset(10, 10), end: Offset.zero),
+
+                        SizedBox(
+                            width:
+                            ScreenUtil.width * 0.015),
+
+                        // right column
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            children: [
+                              // quick stats
+                              Container(
+                                padding:
+                                const EdgeInsets.all(
+                                    16),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius:
+                                  BorderRadius.circular(
+                                      12),
+                                  border: Border.all(
+                                      color: Colors.grey
+                                          .withValues(
+                                          alpha: 0.15)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment:
+                                  CrossAxisAlignment
+                                      .start,
+                                  children: [
+                                    const Text(
+                                        'Quick Stats',
+                                        style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight:
+                                            FontWeight
+                                                .bold,
+                                            color: Colors
+                                                .black87)),
+                                    const SizedBox(
+                                        height: 12),
+                                    StatRow(
+                                      label: 'Total Orders',
+                                      value:
+                                      '$_totalOrders',
+                                      icon: Icons
+                                          .receipt_long_outlined,
+                                      color: AppColors
+                                          .primaryColor,
+                                    ),
+                                    StatRow(
+                                      label: 'Items Sold',
+                                      value:
+                                      '$_totalItemsSold',
+                                      icon: Icons
+                                          .inventory_2_outlined,
+                                      color: Colors.orange,
+                                    ),
+                                    StatRow(
+                                      label:
+                                      'Profit Margin',
+                                      value: _totalRevenue >
+                                          0
+                                          ? '${((_grossProfit / _totalRevenue) * 100).toStringAsFixed(1)}%'
+                                          : '0.0%',
+                                      icon: Icons
+                                          .pie_chart_outline,
+                                      color: Colors.green,
+                                    ),
+                                    StatRow(
+                                      label:
+                                      'Avg Items/Order',
+                                      value: _totalOrders >
+                                          0
+                                          ? '${(_totalItemsSold / _totalOrders).toStringAsFixed(1)}'
+                                          : '0.0',
+                                      icon: Icons
+                                          .shopping_cart_outlined,
+                                      color: Colors.purple,
+                                    ),
+                                    StatRow(
+                                      label: 'Best Day',
+                                      value: _dailySales
+                                          .every((d) =>
+                                      d.amount ==
+                                          0)
+                                          ? 'N/A'
+                                          : _formatDate(
+                                          _dailySales
+                                              .reduce((a,
+                                              b) =>
+                                          a.amount >
+                                              b.amount
+                                              ? a
+                                              : b)
+                                              .date),
+                                      icon:
+                                      Icons.star_outline,
+                                      color: Colors.amber,
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              SizedBox(
+                                  height: ConstantUtil
+                                      .verticalSpacing /
+                                      2),
+
+                              // revenue vs cost
+                              Container(
+                                padding:
+                                const EdgeInsets.all(
+                                    16),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius:
+                                  BorderRadius.circular(
+                                      12),
+                                  border: Border.all(
+                                      color: Colors.grey
+                                          .withValues(
+                                          alpha: 0.15)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment:
+                                  CrossAxisAlignment
+                                      .start,
+                                  children: [
+                                    const Text(
+                                        'Revenue vs Cost',
+                                        style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight:
+                                            FontWeight
+                                                .bold,
+                                            color: Colors
+                                                .black87)),
+                                    const SizedBox(
+                                        height: 12),
+                                    ProgressBar(
+                                      label: 'Revenue',
+                                      value: _totalRevenue,
+                                      max: _totalRevenue,
+                                      color: AppColors
+                                          .primaryColor,
+                                    ),
+                                    const SizedBox(
+                                        height: 8),
+                                    ProgressBar(
+                                      label: 'Cost',
+                                      value: _totalCost,
+                                      max: _totalRevenue,
+                                      color: Colors.orange,
+                                    ),
+                                    const SizedBox(
+                                        height: 8),
+                                    ProgressBar(
+                                      label: 'Profit',
+                                      value: _grossProfit,
+                                      max: _totalRevenue,
+                                      color: Colors.green,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ).animate()
+// 1. Wait slightly so it appears after the initial screen load
+                            .fadeIn(delay: 300.ms, duration:
+                        600.ms)
+// 2. Gently slide down from the top (using slideY with a negative begin)
+                            .slideY(begin: -0.1, end: 0, curve: Curves.easeOutCubic)
+// 3. Optional: add a slight blur-to-clear effect for a premium look
+                            .blur(begin: const Offset(10, 10), end: Offset.zero),
+                      ],
+                    ),
+
+                    SizedBox(
+                        height:
+                        ConstantUtil.verticalSpacing),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

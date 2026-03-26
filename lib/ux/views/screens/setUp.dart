@@ -133,7 +133,6 @@ class _SetUPScreenState extends State<SetUPScreen> {
                                   // Page 2 — Admin user
                                   AddUser(
                                     isSetUp: true,
-                                    selectedRole: UserRole.admin,
                                     onCancel: _previousPage,
                                     onNext: () {
                                       AppUtil.toastMessage(

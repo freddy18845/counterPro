@@ -5,9 +5,9 @@ final class  LoginInitEvent extends LoginEvent {}
 final class  LoginGetUsersEvent extends LoginEvent {}
 final class  LoginSetUserEvent extends LoginEvent {
 
-  final StoredUser user;
 
-  LoginSetUserEvent({required this.user,});
+
+  // LoginSetUserEvent({required this.user,});
 }
 final class  LoginSetPasswordEvent extends LoginEvent {
 

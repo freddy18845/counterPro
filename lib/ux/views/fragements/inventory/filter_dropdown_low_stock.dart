@@ -62,10 +62,9 @@ class _StockFilterDropdownState extends State<StockFilterDropdown> {
           border: _buildBorder(Colors.grey.shade300),
           enabledBorder: _buildBorder(Colors.grey.shade300),
           focusedBorder: _buildBorder(AppColors.primaryColor, width: 1.5),
-          filled: false,
-          isDense: false,
-          fillColor: Colors.transparent,
-          prefixIcon: const Icon(Icons.filter_list, size: 18, color: Colors.grey),
+          filled: true,
+          fillColor: Colors.white,
+         // prefixIcon: const Icon(Icons.filter_list, size: 18, color: Colors.grey),
           suffixIcon: _isLoading
               ? const SizedBox(
               width: 20,

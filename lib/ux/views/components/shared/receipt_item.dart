@@ -22,27 +22,29 @@ class ReceiptItem extends StatelessWidget {
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Container(
             alignment: Alignment.topLeft,
-            width: ScreenUtil.width * 0.28,
+            width: (ScreenUtil.width * 0.28).clamp(90, 94),
             child: Text(
               "$index:",
               style: AppTheme.textStyle.copyWith(
-                fontSize: 10,
+                fontSize: 8,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
-          SizedBox(
-            width: ScreenUtil.width * 0.30,
+
+        SizedBox(
+            width: (ScreenUtil.width * 0.28).clamp(90, 94),
             child: Align(
               alignment: Alignment.topRight,
               child: Text(
                 value,
                 style: AppTheme.textStyle.copyWith(
-                  fontSize: 10,
+                  fontSize: 8,
+                  color: Colors.black
                 ),
               ),
             ),

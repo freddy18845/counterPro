@@ -5,7 +5,6 @@ class AppColors {
   AppColors._();
 
   static const Color primaryColor = Color(0xFF0B2548);
-  static const Color fadedPrimary = Color.fromRGBO(255, 196, 0, 0.5);
   static const Color red = Color(0xFFEC1A22);
   static const Color secondaryColor = Color(0xFFF57921);
   static const Color green = Color(0xFF27862B);

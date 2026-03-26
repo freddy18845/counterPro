@@ -4,10 +4,11 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../../../platform/utils/constant.dart';
 import '../../../res/app_drawables.dart';
+import '../../../utils/shared/screen.dart';
+import '../../../utils/shared/stock_monitor.dart';
 import 'top_header.dart';
-import '../screens/home/reciept_section.dart';
 import 'branch_info.dart';
-import 'exchange_rate.dart';
+import 'summary_data.dart';
 
 class BaseTemplate extends StatefulWidget {
   final bool isProcessing;
@@ -24,14 +25,37 @@ class BaseTemplate extends StatefulWidget {
 }
 
 class _BaseTemplateState extends State<BaseTemplate> {
+  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+  void initState() {
+    super.initState();
+
+    // Only set this after context exists
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Use the global navigator key from main.dart
+      // You need to import main.dart or access it through a global variable
+      if (navigatorKey.currentContext != null) {
+        StockMonitorService.setGlobalContext(navigatorKey.currentContext!);
+      } else {
+        // Fallback to the current context if navigatorKey is not available
+        if (mounted) {
+          StockMonitorService.setGlobalContext(context);
+        }
+      }
+    });
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
       child: Scaffold(
+        resizeToAvoidBottomInset: false,
         extendBody: true,
         extendBodyBehindAppBar: true,
-        appBar: CustomHeaderBar(),
+
+        appBar:ScreenUtil.width >=900? CustomHeaderBar():null,
+        bottomNavigationBar: const BranchInfo(),
         body: Container(
           height: double.infinity,
           width: double.infinity,
@@ -47,37 +71,24 @@ class _BaseTemplateState extends State<BaseTemplate> {
               child: Align(
                 alignment: Alignment.center,
                 child: Container(
-                  constraints: BoxConstraints(
-                    maxWidth: ConstantUtil.maxWidthAllowed,
-                    maxHeight:
-                        ConstantUtil.maxHeightAllowed, // 10 inches at 96 DPI
-                  ),
                   padding: EdgeInsets.only(
-                    top: ConstantUtil.verticalSpacing*1.3,
+                    top: ConstantUtil.verticalSpacing,
                     left: ConstantUtil.horizontalSpacing,
                     right: ConstantUtil.horizontalSpacing
                   ),
                   child: Column(
                     children: [
+                      SizedBox(height:ScreenUtil.width >=900? 60:8),
+                      SummaryData(
+                        isProcessing: widget.isProcessing,
+                        isHomeScreen: widget.isHomeScreen,),
+                      SizedBox(
+                        height: ScreenUtil.height * 0.76,
+                        child: widget.contentSection
 
-
-                       ExchangeRate(isHomeScreen: widget.isHomeScreen,),
-                      Expanded(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded( child: widget.contentSection),
-
-                            SizedBox(width: ConstantUtil.horizontalSpacing),
-
-                            // 3. Right Side: Receipt
-                            const ReceiptSection(),
-                          ],
-                        ),
                       ),
 
-                      // 4. Footer: Branch Info stays at the bottom
-                      const BranchInfo(),
+
                     ],
                   ),
                 ),

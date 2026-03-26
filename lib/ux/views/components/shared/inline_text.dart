@@ -18,7 +18,7 @@ class InlineText extends StatelessWidget {
           child: Text(
             title,
             style: TextStyle(
-              fontSize: (ScreenUtil.height * 0.02).clamp(10, 12),
+              fontSize: (ScreenUtil.height * 0.025).clamp(12, 14),
               fontWeight: FontWeight.bold,
               //fontFamily: 'Gilroy',
             ),

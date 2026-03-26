@@ -3,14 +3,16 @@ import 'package:eswaini_destop_app/ux/nav/app_navigator.dart';
 import 'package:eswaini_destop_app/ux/res/app_strings.dart';
 import 'package:eswaini_destop_app/ux/utils/shared/app.dart';
 import 'package:eswaini_destop_app/ux/utils/shared/screen.dart';
+import 'package:eswaini_destop_app/ux/views/components/dialogs/add_category.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../platform/utils/constant.dart';
-import '../../../blocs/shared/processing/bloc.dart';
+import '../../../models/shared/transaction.dart';
 import '../../../res/app_drawables.dart';
 import '../../../res/app_theme.dart';
+import '../../../utils/sessionManager.dart';
 import '../../fragements/shared/text_styles.dart';
+import '../dialogs/add_and_edit_users.dart';
 import '../dialogs/logout.dart';
 
 class CustomHeaderBar extends StatefulWidget implements PreferredSizeWidget {
@@ -28,7 +30,7 @@ class _CustomHeaderBarState extends State<CustomHeaderBar> {
   bool isProcessing = false;
   late Timer _timer;
   late DateTime _now;
-
+final sessionManager = SessionManager();
   @override
   void initState() {
     super.initState();
@@ -78,38 +80,7 @@ class _CustomHeaderBarState extends State<CustomHeaderBar> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<ProcessingBloc, ProcessingState>(
-      listener: (context, state) {
-        if (state is ProcessingLoadingState) {
-          setState(() {
-            isProcessing = true;
-          });
-        }
-
-        if (state is ProcessingSuccessState) {
-          setState(() {
-            isProcessing = false;
-          });
-          // Optional: Show success message
-          // AppUtil.toastMessage(message: 'Transaction successful!');
-        }
-
-        if (state is ProcessingErrorState) {
-          setState(() {
-            isProcessing = false;
-          });
-          // Show error message
-          AppUtil.toastMessage(message: state.message ?? 'An error occurred', context: context);
-        }
-
-        if (state is ProcessingInitialState) {
-          setState(() {
-            isProcessing = false; // Changed from true to false
-          });
-        }
-      },
-      builder: (context, state) {
-        return Container(
+    return  Container(
           color: Colors.transparent,
           width: double.infinity,
           child: Center(
@@ -123,6 +94,10 @@ class _CustomHeaderBarState extends State<CustomHeaderBar> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   /// HOME BUTTON
+                  /// // display logo
+                  // if (SessionManager().companyLogoPath != null) {
+                  //   Image.file(File(SessionManager().companyLogoPath!));
+                  // }
                   InkWell(
                     onTap: () {
                       if (isProcessing) {
@@ -132,7 +107,7 @@ class _CustomHeaderBarState extends State<CustomHeaderBar> {
                         );
                         return;
                       }
-                      AppNavigator.gotoHome(context: context);
+                      AppNavigator.gotoHome(TransactionData(),context: context);
                     },
                     child: Container(
                       height: double.maxFinite,
@@ -141,12 +116,12 @@ class _CustomHeaderBarState extends State<CustomHeaderBar> {
                         maxWidth: ConstantUtil.maxWidthBtnAppBar,
                       ),
                       padding: EdgeInsets.only(
-                        top: 6,
-                        bottom: 6,
+                        top: 8,
+                        bottom: 10,
                         left: (ScreenUtil.width * 0.01).clamp(13, 15),
                         right: (ScreenUtil.width * 0.03).clamp(40, 60),
                       ),
-                      margin: EdgeInsets.only(right: ScreenUtil.width * 0.03),
+                      margin: EdgeInsets.only(right: ScreenUtil.width * 0.03,),
                       decoration: BoxDecoration(
                         image: DecorationImage(
                           image: AssetImage(AppDrawables.greyCard),
@@ -178,11 +153,34 @@ class _CustomHeaderBarState extends State<CustomHeaderBar> {
                             title: date,
                           ),
                           Spacer(),
-                          iconTitleAndText(
-                            icon: AppDrawables.profileSVG,
-                            title: AppStrings.teller,
-                            text: 'SV2458685ESB',
-                          ),
+                          InkWell(
+                            onTap: () {
+                              // Prevent crash if user not loaded yet
+                              if (sessionManager.currentUser == null) {
+                                AppUtil.toastMessage(
+                                  context: context,
+                                  message: "User not loaded yet",
+                                );
+                                return;
+                              }
+
+                              AppUtil.displayDialog(
+                                dismissible: false,
+                                context: context,
+                                child: AddEditUsersDialog(
+                                  user: sessionManager.currentUser,
+                                ),
+                              );
+                            },
+                            child: iconTitleAndText(
+                              icon: AppDrawables.profileSVG,
+                              title:
+                              "${sessionManager.userRole?.name.toUpperCase() ?? 'ROLE'}",
+                              text:
+                              ": ${sessionManager.currentUser?.name ?? 'Loading...'}",
+                            ),
+                          )
+                          ,
                           Spacer(),
                           iconTitleAndText(
                             icon: AppDrawables.globeSVG,
@@ -223,8 +221,8 @@ class _CustomHeaderBarState extends State<CustomHeaderBar> {
             ),
           ),
         );
-      },
-    );
+
+
   }
 
 

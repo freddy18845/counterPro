@@ -1,9 +1,11 @@
-import '../../platform/utils/constant.dart';
-import '../models/shared/device_data.dart';
-import '../models/shared/terminal_cred.dart';
+import 'package:eswaini_destop_app/ux/models/shared/pos_user.dart';
+import 'package:isar/isar.dart';
+
+import '../../platform/utils/isar_manager.dart';
+import '../models/shared/pos_transaction.dart';
 import '../models/shared/transaction.dart';
-import '../models/terminal_sign_on_response.dart';
-import '../utils/secure_storage.dart';
+import '../models/shared/transaction_row.dart';
+import '../utils/sessionManager.dart';
 
 class TransactionManager {
   // Singleton instance
@@ -12,124 +14,104 @@ class TransactionManager {
   factory TransactionManager() => _instance;
 
   TransactionManager._internal();
+  final isar = IsarService.db;
+  final sessionManager = SessionManager();
+  List<TxnRow> allTransactions = [];
+  List<TxnRow> filtered = [];
+  String? selectedUser;
+  List<String> _users = [];
 
-  TerminalCredentials terminalInfo = TerminalCredentials(
-    currentUser: StoredUser(
-      signOnID: '',
-      fullName: '',
-      pin: '',
-      phoneNumber: '',
-      emailAddress: '',
-      accessLevel: '',
-      accountStatus: '',
-      dateCreation: '',
-      dateLastSeen: '',
-      outlets: '',
-    ),
-    businessId: '',
-    outletID: '',
-    outletName: '',
-    merchantName: '',
-    merchantLocation: '',
-    requireLogin: false,
-    activationDate: '',
-    deviceData: DeviceData(deviceSerialNum: '', deviceModel: '', deviceId: ''),
-    timestamp: '',
-  );
+  bool isLoading = true;
+  double get totalAmount => filtered.fold(0, (sum, t) => sum + t.amount);
+  int get completedCount =>
+      filtered.where((t) => t.status == PosTransactionStatus.completed).length;
+  int get refundedCount =>
+      filtered.where((t) => t.status == PosTransactionStatus.refunded).length;
+  int get voidedCount =>
+      filtered.where((t) => t.status == PosTransactionStatus.voided).length;
+  int get cashCount =>
+      filtered.where((t) => t.method == PaymentMethod.cash).length;
+  int get mobileCount =>
+      filtered.where((t) => t.method == PaymentMethod.mobileMoney).length;
+  int get splitCount =>
+      filtered.where((t) => t.method == PaymentMethod.split).length;
+  int get cardCount =>
+      filtered.where((t) => t.method == PaymentMethod.card).length;
 
-  List<TransactionData> _transactions = [];
+  Future<void> loadTransactions({
+    required Function() onFliter,
+     bool isSubHeader =false,
+    // required DateTime? startDate,
+    // required DateTime? endDate,
+  }) async {
+    try {
+      // load all transactions
+      final txns = await isar.posTransactions.where().findAll();
 
-  TerminalSignOnResponse? sigOnInfo;
+      // load all users for name lookup
+      final users = await isar.posUsers.where().findAll();
+      final userMap = {for (final u in users) u.id: u.name};
 
-  Currency? activeCurrency;
-  final List<Currency> currencies = ConstantUtil.eswatiniCurrencies;
+      // build unique user name list for filter dropdown
+      _users = users.map((u) => u.name).toList();
 
-  bool showSymbol = false;
+      // map to display rows
+      allTransactions = txns.map((t) {
+        return TxnRow(
+          reference: t.transactionNumber,
+          userName: userMap[t.processedByUserId] ?? 'Unknown',
+          amount: t.totalAmount,
+          method: t.paymentMethod,
+          status: t.status,
+          date: t.timestamp,
+          orderNumber: t.orderNumber,
+          saleOrderId: t.saleOrderId,
+        );
+      }).toList();
 
-  Future<TerminalCredentials> getTerminalData() async {
-    return terminalInfo;
+      // sort latest first
+      allTransactions.sort((a, b) => b.date.compareTo(a.date));
+
+      _users = _users.toSet().toList(); // remove duplicates
+
+      if(!isSubHeader){
+        onFliter();
+      }else{
+        applyFilters();
+      }
+    } catch (e) {
+      print('❌ Load transactions error: $e');
+    }
   }
 
-  setSignOnData(TerminalSignOnResponse signOnData) async {
-    sigOnInfo = signOnData;
-  }
+  void applyFilters() {
+    DateTime now = DateTime.now();
 
-  Future<TerminalSignOnResponse> getSignOnData() async {
-    return sigOnInfo!;
-  }
+    DateTime startDate = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      1,
+    );
 
-  setTerminalData() async {
-    terminalInfo = (await SecureStorageService.retrieveCredentials())!;
-  }
+    DateTime endDate = now;
 
-  setCurrentUser({required StoredUser user}) async {
-    terminalInfo = terminalInfo.copyWith(currentUser: user);
-  }
+    filtered = allTransactions.where((t) {
+      final matchesUser = t.userName == sessionManager.currentUser!.name;
+      final matchesStart = !t.date.isBefore(startDate);
 
-  setCurrentPassword({required String psd}) async {
-    final activeUser = terminalInfo.currentUser?.copyWith(pin: psd);
-    setCurrentUser(user: activeUser!);
-    await SecureStorageService.storeCredentials(terminalInfo);
-  }
-
-  Future<void> setActiveCurrency(Currency currency) async {
-    activeCurrency = currency;
-  }
-
-  Future<void> setCurrencies(List<Currency?> currencyList) async {
-    // currencies.clear();
-    // currencies = eswatiniCurrencies();
-    // final validCurrencies = currencyList.whereType<Currency>().toList();
-    //
-    // if (validCurrencies.isEmpty) return;
-    //
-    // if (validCurrencies.first.code == validCurrencies.last.code) {
-    //   currencies.add(validCurrencies.first);
-    // } else {
-    //   currencies.addAll(validCurrencies);
-    // }
-  }
-
-  Future<List<Currency>> getCurrencies() async {
-    return currencies;
-  }
-
-  Future<Currency?> getCurrency() async {
-    return activeCurrency;
-  }
-
-  // Basic CRUD operations
-
-  List<TransactionData> getAllTransactions() {
-    return _transactions.toList();
-  }
-
-  void addTransactionHistoryFromAPI(List<Map<String, dynamic>> transactions) {
-    _transactions
-      ..clear()
-      ..addAll(transactions.map((e) => TransactionData.fromJson(e)));
-
-    // Log summary of the batch operation
-  }
-
-  void addTransactionHistoryAfterTxnAPi(TransactionData transactions) {
-    // Check if transaction is reversed
-    if (transactions.reversed == "1") {
-      // Try to find a matching transaction already in the list
-      final index = _transactions.indexWhere(
-            (t) => t.transactionId == transactions.transactionId,
+      final matchesEnd = !t.date.isAfter(
+        DateTime(
+          endDate.year,
+          endDate.month,
+          endDate.day,
+          23,
+          59,
+          59,
+        ),
       );
 
-      if (index != -1) {
-        // If found, update the reversed flag to "1"
-        _transactions[index].reversed = "1";
-      } else {
-        // If not found, add it anyway
-        _transactions.add(transactions);
-      }
-    } else {
-      // Normal case — just add the new transaction
-      _transactions.add(transactions);
-    }
+      return matchesUser && matchesStart && matchesEnd;
+    }).toList();
   }
 }

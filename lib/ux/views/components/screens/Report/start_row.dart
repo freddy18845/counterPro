@@ -1,5 +1,6 @@
 // ── Stat row ──────────────────────────────────────────────────
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 
 class StatRow extends StatelessWidget {
   final String label;

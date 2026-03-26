@@ -38,16 +38,16 @@ class AppDrawables {
   static const String profileSVG = "assets/svgs/profile.svg";
   static const String globeSVG = "assets/svgs/globe.svg";
   static const String clearSVG = "assets/svgs/clear.svg";
-  static const String withdrawalSVG = "assets/svgs/withdrawal.svg";
-  static const String depositSVG = "assets/svgs/deposit.svg";
-  static const String transfersSVG = "assets/svgs/transfer.svg";
+  static const String salesSVG = "assets/svgs/deposit.svg";
+  static const String inventorySVG = "assets/svgs/transfer.svg";
   static const String walletSVG = "assets/svgs/wallet.svg";
   static const String transactionSVG = "assets/svgs/transactions.svg";
-  static const String mobileWalletSVG = "assets/svgs/momo.svg";
-  static const String accountPaySVG = "assets/svgs/account_pay.svg";
-  static const String p2pPaySVG = "assets/svgs/p2p_pay.svg";
   static const String cardSVG = "assets/svgs/card.svg";
-  static const String chequeSVG = "assets/svgs/cheque.svg";
+  static const String savedSalesSVG = "assets/svgs/cheque.svg";
   static const String homeSVG = "assets/svgs/home.svg";
+  static const String phoneSVG = "assets/svgs/phone.svg";
+  static const String whatsappSVG = "assets/svgs/whatsapp.svg";
+  static const String reportSVG = "assets/svgs/report.svg";
+
 
 }

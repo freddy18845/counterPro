@@ -29,17 +29,17 @@ class _TransactionCardState extends State<TransactionCard> {
     const double totalDividerSpace = (dividerPadding * 2) + dividerWidth;
 
     // 2. Calculate Segment Width (the total space available per item)
-    final double availableWidth = ConstantUtil.maxWidthAllowed - ConstantUtil.maxReceiptCardWidth-(ConstantUtil.horizontalSpacing *4);
+    final double availableWidth =(ScreenUtil.height * 1.57)- ConstantUtil.maxReceiptCardWidth-(ConstantUtil.horizontalSpacing *4);
     final double segmentWidth = availableWidth / ConstantUtil.options.length;
 
     // 3. FIX: Subtract the divider space from ALL cards.
     // This ensures the actual blue/grey card is the same size for everyone.
     final double cardWidth = segmentWidth - totalDividerSpace;
 
-    final bool isLastItem = widget.item.text == AppStrings.transactions;
+    final bool isLastItem = widget.item.text == AppStrings.reports;
 
     return  SizedBox(
-        width: segmentWidth,
+    width: segmentWidth,
         child: Row(
           // Ensure the card and divider stay aligned to the start of their segment
           mainAxisAlignment: MainAxisAlignment.start,
@@ -47,8 +47,8 @@ class _TransactionCardState extends State<TransactionCard> {
             // THE CARD (Now uniform size)
             Container(
               width: cardWidth,
-              height: (ScreenUtil.height * 0.023).clamp(100, 120),
-              padding: const EdgeInsets.symmetric(vertical: 3.5, horizontal: 4.5),
+              height: (ScreenUtil.height * 0.14),
+              padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
               decoration: BoxDecoration(
                 color:widget.item.text==widget.title?AppColors.secondaryColor: Colors.grey.shade300,
                 borderRadius: BorderRadius.circular(12),
@@ -80,8 +80,8 @@ class _TransactionCardState extends State<TransactionCard> {
                         child: SvgPicture.asset(
                           widget.item.icon,
                           // Remove fit: BoxFit.fitHeight if you want strict height/width control
-                          height: (ScreenUtil.height * 0.075).clamp(12, 24),
-                          width: (ScreenUtil.height * 0.075).clamp(12, 24),
+                          height: (ScreenUtil.height * 0.03),
+                          width: (ScreenUtil.height * 0.03),
                         ),
                       ),
                     ),
@@ -101,7 +101,7 @@ class _TransactionCardState extends State<TransactionCard> {
                       widget.item.text,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: (ScreenUtil.height * 0.02).clamp(9, 12),
+                        fontSize: (ScreenUtil.height * 0.015),
                         fontWeight: FontWeight.w900,
                         fontFamily: 'Gilroy',
                       ),

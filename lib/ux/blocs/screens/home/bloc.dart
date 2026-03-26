@@ -3,9 +3,10 @@ import "dart:async";
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
 import "../../../models/screens/home/flow_item.dart";
+import "../../../models/shared/transaction.dart";
 import "../../../nav/app_navigator.dart";
 import "../../../res/app_strings.dart";
-import "../../../utils/shared/app.dart";
+
 
 
 
@@ -22,43 +23,47 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<HomeBaseSecStartFlow>((event, emit) async {
       final flowText = event.item.text;
 metaData = event.item;
-metaData.amount =0;
-metaData.beneficiaryAccount ='';
-metaData.senderAccount ='';
+
 
 
       switch (flowText) {
-        case AppStrings.withdrawal:
-          AppNavigator.gotoWithdrawal(
+        case AppStrings.inventory:
+          AppNavigator.gotoInventory(
             context: sectionContext,
             data: event.item,
-            summaryController: baseSecSummaryController,
+            onIsLowStock: null
+
           );
           break;
 
-        // case AppStrings.payment:
-        //   AppNavigator.gotoAmount(
-        //     context: sectionContext,
-        //     flowInfo: event.item,
-        //     summaryController: baseSecSummaryController,
-        //   );
-        //   break;
-        // case AppStrings.void_:
-        //   AppNavigator.gotoVoid(
-        //     context: sectionContext,
-        //     flowInfo: event.item,
-        //     summaryController: baseSecSummaryController,
-        //   );
-        //   break;
-        // case AppStrings.saleCash:
-        //   AppNavigator.gotoCashback(
-        //     context: sectionContext,
-        //     flowInfo: event.item,
-        //     summaryController: baseSecSummaryController,
-        //   );
+        case AppStrings.sales:
+          AppNavigator.gotoSales(
+            context: sectionContext,
+            data: event.item,
+          );
+          break;
+        case AppStrings.transactions:
+          AppNavigator.gotoTransaction(
+            context: sectionContext,
+              data: event.item,
+
+          );
+          break;
+        case AppStrings.reports:
+          AppNavigator.gotoReports(
+            context: sectionContext,
+            data: event.item,
+          );
+          break;
+          case AppStrings.savedSales:
+          AppNavigator.gotoSalesOrder(
+            context: sectionContext,
+            data: event.item,
+
+          );
           break;
         default:
-          AppNavigator.gotoHome(context: sectionContext);
+          AppNavigator.gotoHome(TransactionData(),context: sectionContext);
       }
     });
 

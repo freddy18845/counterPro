@@ -6,12 +6,12 @@ final class  LoginSelectUsersState extends LoginState {
 
   final bool isLoading;
   final String error;
-  final List<StoredUser> users;
+
 
   LoginSelectUsersState({
     this.isLoading = true,
     this.error = "",
-    this.users = const []
+
   });
 
 }

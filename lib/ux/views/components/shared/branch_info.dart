@@ -1,5 +1,6 @@
 import 'package:eswaini_destop_app/platform/utils/constant.dart';
 import 'package:eswaini_destop_app/ux/res/app_strings.dart';
+import 'package:eswaini_destop_app/ux/utils/sessionManager.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../../res/app_theme.dart';
@@ -13,30 +14,37 @@ class BranchInfo extends StatefulWidget {
 }
 
 class _BranchInfoState extends State<BranchInfo> {
+ final sessionManager = SessionManager();
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(top: ConstantUtil.verticalSpacing),
+      padding: EdgeInsets.only(bottom: ConstantUtil.verticalSpacing),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           _buildRowCard(
-            title: AppStrings.location,
-            text: ConstantUtil.defaultMerchantLocation,
+            title: AppStrings.company,
+            text: sessionManager.company!.name,
+          ),
+
+          AppTheme.buildVerticalDivider(color: Colors.grey),
+          _buildRowCard(
+            title: AppStrings.bid_,
+            text: '${sessionManager.company!.companyId}',
           ),
           AppTheme.buildVerticalDivider(color: Colors.grey),
           _buildRowCard(
-            title: AppStrings.branch,
-            text: ConstantUtil.defaultMerchantName,
+            title: AppStrings.address,
+            text: sessionManager.company!.address,
           ),
           AppTheme.buildVerticalDivider(color: Colors.grey),
           _buildRowCard(
-            title: AppStrings.businessId_,
-            text: ConstantUtil.defaultBusinessID,
+            title: AppStrings.email,
+            text: sessionManager.company!.email,
           ),
           AppTheme.buildVerticalDivider(color: Colors.grey),
-          _buildRowCard(title: AppStrings.country, text: AppStrings.eswatini),
+          _buildRowCard(title: AppStrings.phone, text: "${sessionManager.company!.contactOne} ,${sessionManager.company!.contactTwo}"),
         ],
       ),
     );

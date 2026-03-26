@@ -1,11 +1,11 @@
 import "dart:ui";
 
 import "package:flutter/material.dart";
+import "package:flutter/services.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
 import "package:isar/isar.dart";
 import "../../../platform/utils/isar_manager.dart";
 import "../../blocs/screens/login/bloc.dart";
-import "../../enums/screens/login/flow_step.dart";
 import "../../models/shared/pos_user.dart";
 import "../../nav/app_navigator.dart";
 import "../../res/app_drawables.dart";
@@ -49,9 +49,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      child: Scaffold(
+    return Scaffold(
         resizeToAvoidBottomInset: false,
         extendBody: true,
         extendBodyBehindAppBar: true,
@@ -80,35 +78,65 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    BlocBuilder<LoginBloc, LoginState>(
-                      builder: (context, LoginState state) {
-                        Widget section = Container();
-
-                        if (state is LoginPasswordState) {
-                          loginBloc.activeStep = LoginFlowStep.password;
-                          section = LoginPasswordSection(
-                            key: UniqueKey(),
-                            isLoading: isLoading,
-                            loginBloc: loginBloc,
-                            emailController: emailController,
-                            passwordController: passwordController,
-                            subText: AppStrings.enterYourCredentialsToLogIn,
-                            onSetValue: (String value) => loginBloc.add(
-                              LoginSetPasswordEvent(value: value),
-                            ),
-                          );
-                        }
-
-                        return section;
-                      },
+                    Align(
+                      alignment: Alignment.topRight,
+                      child: Padding(padding: EdgeInsets.only(
+                          top: ScreenUtil.height * 0.06,
+                          right: ScreenUtil.width * 0.05
+                      ),
+                      child:Container(
+                        height:  ScreenUtil.height * 0.06,
+                        width:  ScreenUtil.height * 0.06,
+                        decoration: BoxDecoration(
+                            color: Colors.red.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(ScreenUtil.height * 0.06)
+                        ),
+                        alignment: Alignment.center,
+                        child:  IconButton(
+                          onPressed: () {
+                            SystemChannels.platform.invokeMethod<void>('SystemNavigator.pop');
+                          },
+                          icon: Icon(
+                            Icons.power_settings_new_rounded,
+                            size:  ScreenUtil.height * 0.03,
+                            color: Colors.red,
+                          ),
+                        ),
+                      ),
+                      ),
                     ),
+                    ScreenUtil.width >=900? Spacer(): SizedBox(height:16 ,),
+
+                    BlocBuilder<LoginBloc, LoginState>(
+                        builder: (context, LoginState state) {
+                          Widget section = Container();
+
+                          if (state is LoginPasswordState) {
+                            section = LoginPasswordSection(
+                              key: UniqueKey(),
+                              isLoading: isLoading,
+                              loginBloc: loginBloc,
+                              emailController: emailController,
+                              passwordController: passwordController,
+                              subText: AppStrings.enterYourCredentialsToLogIn,
+                              onSetValue: (String value) => loginBloc.add(
+                                LoginSetPasswordEvent(value: value),
+                              ),
+                            );
+                          }
+
+                          return section;
+                        },
+                      ),
+
+                    Spacer(),
                   ],
                 ),
               ),
             ),
           ),
         ),
-      ),
+
     );
   }
 }
