@@ -1,7 +1,5 @@
 import 'dart:async';
-
 import 'package:eswaini_destop_app/ux/blocs/screens/home/bloc.dart';
-import 'package:eswaini_destop_app/ux/blocs/shared/wallet/bloc.dart';
 import 'package:eswaini_destop_app/ux/models/screens/home/flow_item.dart';
 import 'package:eswaini_destop_app/ux/views/screens/home.dart';
 import 'package:flutter/cupertino.dart';
@@ -13,15 +11,17 @@ import '../blocs/screens/login/bloc.dart';
 import '../blocs/screens/withdrawal/bloc.dart';
 import '../blocs/shared/p2p/bloc.dart';
 import '../blocs/shared/preview/bloc.dart';
-import '../blocs/shared/processing/bloc.dart';
+
 import '../blocs/shared/account/bloc.dart';
 import '../views/screens/login.dart';
-import '../views/screens/withdrawal.dart';
+import '../views/screens/inventory.dart';
+import '../views/screens/sales.dart';
 
 class AppNavigator {
   static const String login = "login";
   static const String home = "home";
-  static const String withdrawal = "withdrawal";
+  static const String inventory = "inventory";
+  static const String sales = "sales";
   static const String configSettings = "configSettings";
 
   AppNavigator._();
@@ -74,14 +74,12 @@ class AppNavigator {
       (context) => BlocProvider<HomeBloc>(create: (context) => HomeBloc()),
       (context) =>
           BlocProvider<PreviewBloc>(create: (context) => PreviewBloc()),
-      (context) =>
-          BlocProvider<ProcessingBloc>(create: (context) => ProcessingBloc()),
     ],
     screen: const HomeScreen(),
     routId: home,
   );
 
-  static Future gotoWithdrawal({
+  static Future gotoInventory({
     required BuildContext context,
     required StreamController<Map> summaryController,
     required HomeFlowItem data,
@@ -92,23 +90,43 @@ class AppNavigator {
       (context) =>
           BlocProvider<PreviewBloc>(create: (context) => PreviewBloc()),
 
-      (context) => BlocProvider<WalletBloc>(create: (context) => WalletBloc()),
       (context) =>
           BlocProvider<AccountBloc>(create: (context) => AccountBloc()),
           (context) =>
           BlocProvider<P2PBloc>(create: (context) => P2PBloc()),
       (context) =>
           BlocProvider<WithdrawalBloc>(create: (context) => WithdrawalBloc()),
-      (context) =>
-          BlocProvider<ProcessingBloc>(create: (context) => ProcessingBloc()),
+
     ],
-    screen: WithdrawalScreen(
+    screen: InventoryScreen(
       selectedTransaction: data,
       refreshController: summaryController,
     ),
-    routId: withdrawal,
+    routId: inventory,
   );
 
+  static Future gotoSales({
+    required BuildContext context,
+    required StreamController<Map> summaryController,
+    required HomeFlowItem data,
+  }) => _pushNav(
+    context: context,
+    newBlocs: [
+          (context) => BlocProvider<HomeBloc>(create: (context) => HomeBloc()),
+          (context) =>
+          BlocProvider<PreviewBloc>(create: (context) => PreviewBloc()),
+          (context) =>
+          BlocProvider<WithdrawalBloc>(create: (context) => WithdrawalBloc()),
+        
+
+
+    ],
+    screen: SalesScreen(
+      selectedTransaction: data,
+      refreshController: summaryController,
+    ),
+    routId: sales,
+  );
   // static Future gotoConfigSettings({required BuildContext context}) =>
   //     _pushNav(
   //       context: context,

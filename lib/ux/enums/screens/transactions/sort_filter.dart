@@ -1,4 +1,0 @@
-enum TransactionsSortFilter {
-  sort,
-  filter
-}

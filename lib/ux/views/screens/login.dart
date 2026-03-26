@@ -2,12 +2,17 @@ import "dart:ui";
 
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
+import "package:isar/isar.dart";
+import "../../../platform/utils/isar_manager.dart";
 import "../../blocs/screens/login/bloc.dart";
 import "../../enums/screens/login/flow_step.dart";
+import "../../models/shared/pos_user.dart";
+import "../../nav/app_navigator.dart";
 import "../../res/app_drawables.dart";
 import "../../res/app_strings.dart";
 import "../../utils/shared/screen.dart";
 import "../components/screens/login/password_section.dart";
+import "../components/shared/footer.dart";
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -17,6 +22,12 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   late LoginBloc loginBloc;
+  bool isLoading = false;
+  bool obscurePassword = true;
+  final _formKey = GlobalKey<FormState>();
+  final isar = IsarService().isar;
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
 
   @override
   void initState() {
@@ -41,6 +52,10 @@ class _LoginScreenState extends State<LoginScreen> {
     return PopScope(
       canPop: false,
       child: Scaffold(
+        resizeToAvoidBottomInset: false,
+        extendBody: true,
+        extendBodyBehindAppBar: true,
+        bottomNavigationBar: supportInfo(),
         body: Container(
           height: double.infinity,
           width: double.infinity,
@@ -50,78 +65,50 @@ class _LoginScreenState extends State<LoginScreen> {
               fit: BoxFit.fill,
             ),
           ),
-          child:ClipRect(
+          child: ClipRect(
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 3.0, sigmaY: 3.0), // Adjust blur intensity here
+              filter: ImageFilter.blur(
+                sigmaX: 3.0,
+                sigmaY: 3.0,
+              ), // Adjust blur intensity here
               child: Container(
                 alignment: Alignment.center,
-                color: Colors.black.withOpacity(0.1), // Optional: adds a slight tint to the blur
+                color: Colors.black.withOpacity(
+                  0.1,
+                ), // Optional: adds a slight tint to the blur
                 child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    BlocBuilder<LoginBloc, LoginState>(
+                      builder: (context, LoginState state) {
+                        Widget section = Container();
 
-            children: [
-             // CustomHeaderBar(),
-              SizedBox(height:
-                  ScreenUtil.height * 0.23
-              ),
-              BlocBuilder<LoginBloc, LoginState>(
-                builder: (context, LoginState state) {
-                  Widget section = Container();
+                        if (state is LoginPasswordState) {
+                          loginBloc.activeStep = LoginFlowStep.password;
+                          section = LoginPasswordSection(
+                            key: UniqueKey(),
+                            isLoading: isLoading,
+                            loginBloc: loginBloc,
+                            emailController: emailController,
+                            passwordController: passwordController,
+                            subText: AppStrings.enterYourCredentialsToLogIn,
+                            onSetValue: (String value) => loginBloc.add(
+                              LoginSetPasswordEvent(value: value),
+                            ),
+                          );
+                        }
 
-                  if (state is LoginPasswordState) {
-                    loginBloc.activeStep = LoginFlowStep.password;
-                    section = LoginPasswordSection(
-                      key: UniqueKey(),
-                      loginBloc: loginBloc,
-                      subText: AppStrings.enterYourCredentialsToLogIn,
-                      onSetValue: (String value) =>
-                          loginBloc.add(LoginSetPasswordEvent(value: value)),
-                      onSubmit: () => loginBloc.add(LoginSubmitPasswordEvent()),
-                    );
-                  }
-                  // if (state is LoginSubmitPasswordState) {
-                  //   loginBloc.activeStep = LoginFlowStep.checkPassword;
-                  //   section = LoginPasswordProgressSection(
-                  //     key: UniqueKey(),
-                  //     loginBloc: loginBloc,
-                  //     isLoading: state.isLoading,
-                  //     error: state.error,
-                  //     onRetry: () => loginBloc.add(LoginSubmitPasswordEvent()),
-                  //     onAction: () => loginBloc.add(LoginResetPasswordEvent()),
-                  //   );
-                  // }
-                  // if (state is LoginGetTransactionsState) {
-                  //   loginBloc.activeStep = LoginFlowStep.getTransactions;
-                  //   section = LoginPasswordProgressSection(
-                  //     key: UniqueKey(),
-                  //     loginBloc: loginBloc,
-                  //     isLoading: state.isLoading,
-                  //     error: state.error,
-                  //     progressText: AppStrings.gettingTransactions,
-                  //     onRetry: () => loginBloc.add(LoginGetTransactionsEvent()),
-                  //   );
-                  // }
-                  return section;
-                },
-              ),
-              Spacer(),
-              Padding(
-                padding: EdgeInsets.only(
-                  bottom: 30,
-                ),
-                child: Text(
-                  AppStrings.link,
-                  style: TextStyle(
-                    fontSize: (ScreenUtil.height * 0.02).clamp(8, 10),
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Gilroy',
-                  ),
+                        return section;
+                      },
+                    ),
+                  ],
                 ),
               ),
-            ]
+            ),
           ),
         ),
-            ),
-          )) ));
+      ),
+    );
   }
 }

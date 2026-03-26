@@ -1,5 +1,0 @@
-class QrInfo {
-
-  String? data;
-
-}

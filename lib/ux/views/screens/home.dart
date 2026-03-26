@@ -4,12 +4,15 @@ import "package:eswaini_destop_app/platform/utils/constant.dart";
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
 import "../../blocs/screens/home/bloc.dart";
+import "../../models/shared/transaction.dart";
+import "../components/screens/home/right_card.dart";
 import "../components/screens/home/transactions_list.dart";
 import "../components/screens/home/upper_card.dart";
 import "../components/shared/ui_template.dart";
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final TransactionData? transactionData;
+  const HomeScreen({super.key, this.transactionData});
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -36,17 +39,28 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return BaseTemplate(
       isHomeScreen: true,
-      contentSection:
+      contentSection: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child:  Column(
+                children: [
+                  Expanded(child: HomeUpperCard()),
+                  SizedBox(height: ConstantUtil.verticalSpacing),
+                  TransactionsSection(homeBloc: homeBloc),
+                ],
+              ),
 
+          ),
 
-          Column(children: [
-           Expanded(child:  HomeUpperCard(),),
-            SizedBox(height: ConstantUtil.verticalSpacing),
-            TransactionsSection(homeBloc: homeBloc,),
-          ],)
+          SizedBox(width: ConstantUtil.horizontalSpacing),
 
-
-
+          // 3. Right Side: Receipt
+          HomeRightSection(
+transactionData:widget.transactionData,
+          ),
+        ],
+      ),
     );
   }
 }
