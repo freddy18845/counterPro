@@ -1,26 +1,19 @@
-import 'package:eswaini_destop_app/ux/nav/app_navigator.dart';
-import 'package:eswaini_destop_app/ux/res/app_theme.dart';
-import 'package:eswaini_destop_app/ux/views/components/dialogs/message.dart';
 import 'package:eswaini_destop_app/ux/views/fragements/shared/short_dash_lines.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:intl/intl.dart';
-
 import '../../../../../platform/utils/constant.dart';
-import '../../../../../platform/utils/isar_manager.dart';
+import '../../../../models/shared/pos_transaction.dart';
 import '../../../../models/shared/sale_order.dart';
 import '../../../../models/shared/transaction.dart';
 import '../../../../res/app_colors.dart';
 import '../../../../res/app_drawables.dart';
 import '../../../../res/app_strings.dart';
 import '../../../../utils/sessionManager.dart';
-import '../../../../utils/shared/app.dart';
 import '../../../../utils/shared/screen.dart';
-import '../../dialogs/logout.dart';
-import '../../dialogs/payment_dailog.dart';
+import '../../dialogs/print_confirmation.dart';
 import '../../shared/btn.dart';
 import '../../shared/cart_total_row.dart';
-import '../../shared/inline_text.dart';
 import '../../shared/receipt_item.dart';
 import '../home/reciept_section.dart';
 
@@ -32,17 +25,36 @@ class HomeRightSection extends StatelessWidget {
     this.transactionData,
   });
 
+  // ── Payment method label ──────────────────────────────────────
+  String _paymentLabel(PaymentMethod? method) {
+    switch (method) {
+      case PaymentMethod.cash:
+        return 'Cash';
+      case PaymentMethod.card:
+        return 'Card';
+      case PaymentMethod.mobileMoney:
+        return 'Mobile Money';
+      case PaymentMethod.split:
+        return 'Split';
+      case null:
+        return '-';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final sessionManager = SessionManager();
 
-    /// ✅ SAFE DATA EXTRACTION
+    // ── Safe data extraction ──────────────────────────────────
     final cart = transactionData?.cart ?? [];
     final total = transactionData?.total ?? 0.0;
     final subtotal = transactionData?.subtotal ?? 0.0;
     final tax = transactionData?.tax ?? 0.0;
     final txnID = transactionData?.txnID ?? '';
     final dateTime = transactionData?.dateTime;
+    final transaction = transactionData?.transaction;
+    final order = transactionData?.order;
+    final hasData = transactionData != null && cart.isNotEmpty;
 
     return leftCardSection(
       sideChild: Column(
@@ -51,7 +63,8 @@ class HomeRightSection extends StatelessWidget {
           Text(
             AppStrings.receiptHistory,
             style: TextStyle(
-              fontSize: (ScreenUtil.height * 0.025).clamp(12, 14),
+              fontSize:
+              (ScreenUtil.height * 0.025).clamp(12, 14),
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -60,7 +73,8 @@ class HomeRightSection extends StatelessWidget {
             child: Text(
               AppStrings.previewReceipt,
               style: TextStyle(
-                fontSize: (ScreenUtil.height * 0.02).clamp(9, 10),
+                fontSize:
+                (ScreenUtil.height * 0.02).clamp(9, 10),
                 fontFamily: 'Gilroy',
               ),
             ),
@@ -82,10 +96,11 @@ class HomeRightSection extends StatelessWidget {
                 children: [
                   const SizedBox(height: 16),
 
-                  /// LOGO
+                  // ── Logo ─────────────────────────────────
                   Center(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 8),
                       child: SvgPicture.asset(
                         AppDrawables.darkLogoSVG,
                         width: 80,
@@ -94,7 +109,7 @@ class HomeRightSection extends StatelessWidget {
                     ),
                   ),
 
-                  /// COMPANY INFO
+                  // ── Company info ──────────────────────────
                   if (sessionManager.companyName != null)
                     Text(
                       sessionManager.companyName!,
@@ -104,7 +119,6 @@ class HomeRightSection extends StatelessWidget {
                       ),
                       textAlign: TextAlign.center,
                     ),
-
                   if (sessionManager.companyAddress != null)
                     Text(
                       sessionManager.companyAddress!,
@@ -114,34 +128,120 @@ class HomeRightSection extends StatelessWidget {
                       ),
                       textAlign: TextAlign.center,
                     ),
+                  if (sessionManager.companyContactOne != null)
+                    Text(
+                      sessionManager.companyContactOne!,
+                      style: const TextStyle(
+                        fontSize: 8,
+                        color: Colors.grey,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+
                   const SizedBox(height: 3),
-                  const DashedLine() ,
+                  const DashedLine(),
                   const SizedBox(height: 2),
 
-                  /// RECEIPT META
+                  // ── Receipt meta ──────────────────────────
                   ReceiptItem(
                     index: AppStrings.teller,
-                    value: sessionManager.currentUser?.name ?? '',
+                    value:
+                    sessionManager.currentUser?.name ?? '-',
                   ),
                   ReceiptItem(
                     index: AppStrings.dateTime,
                     value: dateTime != null
-                        ? DateFormat('yyyy-MM-dd HH:mm')
+                        ? DateFormat('dd/MM/yyyy HH:mm')
                         .format(dateTime)
-                        : DateFormat('yyyy-MM-dd HH:mm')
+                        : DateFormat('dd/MM/yyyy HH:mm')
                         .format(DateTime.now()),
                   ),
                   ReceiptItem(
                     index: AppStrings.transactionId,
-                    value: txnID.isNotEmpty?txnID:'TXN-0000000',
+                    value: txnID.isNotEmpty
+                        ? txnID
+                        : 'TXN-0000000',
                   ),
 
-                  cart.isNotEmpty?SizedBox(height: 8,): Container(
-                    margin: EdgeInsets.only(top: 2),
-                    child: DashedLine(),
+                  // ── Payment method ← added ─────────────
+                  if (transaction != null)
+                    ReceiptItem(
+                      index: 'Method',
+                      value:
+                      _paymentLabel(transaction.paymentMethod),
+                    ),
+
+                  // ── Amount paid + change ← added ──────
+                  if (transaction != null) ...[
+                    ReceiptItem(
+                      index: 'Paid',
+                      value:
+                      '${ConstantUtil.currencySymbol} ${transaction.amountPaid.toStringAsFixed(2)}',
+                    ),
+                    ReceiptItem(
+                      index: 'Change',
+                      value:
+                      '${ConstantUtil.currencySymbol} ${transaction.changeGiven.toStringAsFixed(2)}',
+                    ),
+                  ],
+
+                  // ── Status badge ← added ───────────────
+                  if (order != null)
+                    Padding(
+                      padding:
+                      const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        mainAxisAlignment:
+                        MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: order.status ==
+                                  SaleOrderStatus.completed
+                                  ? Colors.green
+                                  .withValues(alpha: 0.1)
+                                  : Colors.orange
+                                  .withValues(alpha: 0.1),
+                              borderRadius:
+                              BorderRadius.circular(20),
+                              border: Border.all(
+                                color: order.status ==
+                                    SaleOrderStatus.completed
+                                    ? Colors.green
+                                    .withValues(alpha: 0.4)
+                                    : Colors.orange
+                                    .withValues(alpha: 0.4),
+                              ),
+                            ),
+                            child: Text(
+                              order.status ==
+                                  SaleOrderStatus.completed
+                                  ? '✓ Completed'
+                                  : 'Saved',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: order.status ==
+                                    SaleOrderStatus.completed
+                                    ? Colors.green
+                                    : Colors.orange,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  cart.isNotEmpty
+                      ? const SizedBox(height: 8)
+                      : Container(
+                    margin: const EdgeInsets.only(top: 2),
+                    child: const DashedLine(),
                   ),
 
-                  /// CART HEADER
+                  // ── Cart header ───────────────────────────
                   if (cart.isNotEmpty)
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -191,7 +291,7 @@ class HomeRightSection extends StatelessWidget {
 
                   const SizedBox(height: 4),
 
-                  /// CART ITEMS
+                  // ── Cart items ────────────────────────────
                   Expanded(
                     child: cart.isEmpty
                         ? Center(
@@ -206,7 +306,7 @@ class HomeRightSection extends StatelessWidget {
                           ),
                           const SizedBox(height: 16),
                           const Text(
-                            'Cart is Empty',
+                            'No receipt yet',
                             style: TextStyle(
                               color: AppColors.primaryColor,
                               fontFamily: 'Gilroy',
@@ -234,7 +334,6 @@ class HomeRightSection extends StatelessWidget {
                               Expanded(
                                 flex: 3,
                                 child: Text(
-
                                   item.product?.name ?? '',
                                   maxLines: 1,
                                   overflow:
@@ -245,23 +344,25 @@ class HomeRightSection extends StatelessWidget {
                               ),
                               Expanded(
                                 child: Text(
-                                  textAlign: TextAlign.center,
                                   '${item.quantity}',
+                                  textAlign:
+                                  TextAlign.center,
                                   style: const TextStyle(
-                                    fontSize: 10,
+                                      fontSize: 10),
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  '${ConstantUtil.currencySymbol} ${(item.total ?? 0).toStringAsFixed(2)}',
+                                  textAlign:
+                                  TextAlign.right,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors
+                                        .primaryColor,
                                   ),
                                 ),
                               ),
-                          Expanded(
-                            child:   Text(
-                              textAlign: TextAlign.right,
-                                '${(item.total ?? 0).toStringAsFixed(2)}',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color:
-                                  AppColors.primaryColor,
-                                ),
-                              ),)
                             ],
                           ),
                         );
@@ -269,11 +370,11 @@ class HomeRightSection extends StatelessWidget {
                     ),
                   ),
 
-                  /// TOTALS
+                  // ── Totals ────────────────────────────────
                   if (cart.isNotEmpty) ...[
                     Divider(
-                        color: Colors.grey
-                            .withValues(alpha: 0.3)),
+                        color:
+                        Colors.grey.withValues(alpha: 0.3)),
                     TotalRow(
                       label: AppStrings.subTotal,
                       value:
@@ -290,21 +391,33 @@ class HomeRightSection extends StatelessWidget {
                       '${ConstantUtil.currencySymbol} ${total.toStringAsFixed(2)}',
                       isBold: true,
                     ),
-                    SizedBox(height: ScreenUtil.height * 0.035,)
+                    SizedBox(
+                        height: ScreenUtil.height * 0.035),
                   ],
                 ],
               ),
             ),
           ),
 
-          /// PRINT BUTTON
+          // ── Print button ──────────────────────────────────
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Btn(
-              isActive: cart.isNotEmpty,
+              isActive: hasData, // ← disabled when no data
               bgImage: AppDrawables.blueCard,
               text: AppStrings.print,
-              onTap: () {},
+              onTap: !hasData
+                  ? (){}
+                  : () async {
+                await showDialog(
+                  context: context,
+                  builder: (_) => PrintConfirmDialog(
+                    order: order ?? SaleOrder(),
+                    transaction:
+                    transaction ?? PosTransaction(),
+                  ),
+                );
+              },
             ),
           ),
         ],

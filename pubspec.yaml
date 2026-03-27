@@ -44,6 +44,7 @@ dependencies:
   bluetooth_print: ^4.3.0
   fluttertoast: ^8.2.12
   gif_view: ^0.3.1
+  window_manager: ^0.5.1
   crclib: ^3.0.0
   screenshot: ^3.0.0
   sunmi_printer_plus: ^4.1.0
@@ -69,6 +70,7 @@ dependencies:
   flutter_local_notifications: ^17.1.2
   excel: ^4.0.6
   file_selector: ^1.0.4
+  screen_retriever: ^0.2.0
 
 
 dev_dependencies:

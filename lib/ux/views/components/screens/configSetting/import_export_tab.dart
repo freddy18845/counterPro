@@ -6,12 +6,11 @@ import 'package:eswaini_destop_app/ux/models/shared/product.dart';
 import 'package:eswaini_destop_app/ux/views/components/screens/configSetting/section_title.dart';
 import 'package:excel/excel.dart' hide Border;
 import 'package:file_selector/file_selector.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart' hide Border;
+import 'package:flutter/material.dart';
 import 'package:isar/isar.dart';
 
 import '../../../../res/app_colors.dart';
-import '../../../../utils/export_service.dart';
+import '../../../../utils/export_service.dart' as excel;
 import '../../../../utils/shared/app.dart';
 import '../../shared/btn.dart';
 import 'export_card.dart';
@@ -26,17 +25,25 @@ class ImportExportTab extends StatefulWidget {
 
 class ImportExportTabState extends State<ImportExportTab> {
   bool _isExporting = false;
-  bool _isImporting = false;
-  String? _importStatus;
-  Color _importStatusColor = Colors.green;
 
+  // product import
+  bool _isImportingProducts = false;
+  String? _productImportStatus;
+  Color _productImportStatusColor = Colors.green;
+
+  // category import
+  bool _isImportingCategories = false;
+  String? _categoryImportStatus;
+  Color _categoryImportStatusColor = Colors.green;
+
+  // ── EXPORTS ───────────────────────────────────────────────────
   Future<void> _exportProducts() async {
     setState(() => _isExporting = true);
     try {
       final products =
       await widget.isar.products.where().findAll();
       final rows = products
-          .map((p) => TxnExportRow(
+          .map((p) => excel.TxnExportRow(
         reference: p.sku,
         userName: p.name,
         amount: p.sellingPrice,
@@ -45,7 +52,7 @@ class ImportExportTabState extends State<ImportExportTab> {
         date: p.createdAt,
       ))
           .toList();
-      await ExportService.exportToExcel(
+      await excel.ExportService.exportToExcel(
         context: context,
         transactions: rows,
         fileName:
@@ -62,7 +69,7 @@ class ImportExportTabState extends State<ImportExportTab> {
       final cats =
       await widget.isar.categorys.where().findAll();
       final rows = cats
-          .map((c) => TxnExportRow(
+          .map((c) => excel.TxnExportRow(
         reference: c.id.toString(),
         userName: c.name,
         amount: 0,
@@ -71,7 +78,7 @@ class ImportExportTabState extends State<ImportExportTab> {
         date: c.createdAt,
       ))
           .toList();
-      await ExportService.exportToExcel(
+      await excel.ExportService.exportToExcel(
         context: context,
         transactions: rows,
         fileName:
@@ -85,11 +92,10 @@ class ImportExportTabState extends State<ImportExportTab> {
   Future<void> _exportTransactions() async {
     setState(() => _isExporting = true);
     try {
-      final txns = await widget.isar.posTransactions
-          .where()
-          .findAll();
+      final txns =
+      await widget.isar.posTransactions.where().findAll();
       final rows = txns
-          .map((t) => TxnExportRow(
+          .map((t) => excel.TxnExportRow(
         reference: t.transactionNumber,
         userName: t.processedByUserId.toString(),
         amount: t.totalAmount,
@@ -98,7 +104,7 @@ class ImportExportTabState extends State<ImportExportTab> {
         date: t.timestamp,
       ))
           .toList();
-      await ExportService.exportToExcel(
+      await excel.ExportService.exportToExcel(
         context: context,
         transactions: rows,
         fileName:
@@ -109,6 +115,7 @@ class ImportExportTabState extends State<ImportExportTab> {
     }
   }
 
+  // ── IMPORT PRODUCTS ───────────────────────────────────────────
   Future<void> _importProducts() async {
     const typeGroup = XTypeGroup(
       label: 'Excel Files',
@@ -119,9 +126,9 @@ class ImportExportTabState extends State<ImportExportTab> {
     if (file == null) return;
 
     setState(() {
-      _isImporting = true;
-      _importStatus = 'Reading file...';
-      _importStatusColor = AppColors.primaryColor;
+      _isImportingProducts = true;
+      _productImportStatus = 'Reading file...';
+      _productImportStatusColor = AppColors.primaryColor;
     });
 
     try {
@@ -182,7 +189,6 @@ class ImportExportTabState extends State<ImportExportTab> {
                 await widget.isar.categorys.put(category);
               }
 
-              // update existing or create new
               final existing = await widget.isar.products
                   .where()
                   .filter()
@@ -212,28 +218,131 @@ class ImportExportTabState extends State<ImportExportTab> {
               skipped++;
             }
           }
+          break;
+        }
+      });
+
+      setState(() {
+        _productImportStatus =
+        '✅ Imported $imported products. Skipped $skipped rows.';
+        _productImportStatusColor = Colors.green;
+        _isImportingProducts = false;
+      });
+    } catch (e) {
+      setState(() {
+        _productImportStatus = '❌ Import failed: $e';
+        _productImportStatusColor = Colors.red;
+        _isImportingProducts = false;
+      });
+    }
+  }
+
+  // ── IMPORT CATEGORIES ─────────────────────────────────────────
+  // Excel columns: Name, Description, Status (Active/Inactive)
+  Future<void> _importCategories() async {
+    const typeGroup = XTypeGroup(
+      label: 'Excel Files',
+      extensions: ['xlsx', 'xls', 'csv'],
+    );
+    final XFile? file =
+    await openFile(acceptedTypeGroups: [typeGroup]);
+    if (file == null) return;
+
+    setState(() {
+      _isImportingCategories = true;
+      _categoryImportStatus = 'Reading file...';
+      _categoryImportStatusColor = AppColors.primaryColor;
+    });
+
+    try {
+      final bytes = await File(file.path).readAsBytes();
+      final excel = Excel.decodeBytes(bytes);
+
+      int imported = 0;
+      int updated = 0;
+      int skipped = 0;
+
+      await widget.isar.writeTxn(() async {
+        for (final table in excel.tables.keys) {
+          final sheet = excel.tables[table];
+          if (sheet == null) continue;
+
+          for (int i = 1; i < sheet.rows.length; i++) {
+            final row = sheet.rows[i];
+            if (row.isEmpty) continue;
+
+            try {
+              final name =
+                  row[0]?.value?.toString().trim() ?? '';
+              final description =
+                  row[1]?.value?.toString().trim() ?? '';
+              final statusStr =
+                  row[2]?.value?.toString().trim().toLowerCase() ??
+                      'active';
+
+              if (name.isEmpty) {
+                skipped++;
+                continue;
+              }
+
+              final isActive = statusStr != 'inactive';
+
+              // check if category already exists
+              final existing = await widget.isar.categorys
+                  .where()
+                  .filter()
+                  .nameEqualTo(name)
+                  .findFirst();
+
+              if (existing != null) {
+                // update existing
+                existing
+                  ..description = description.isEmpty
+                      ? null
+                      : description
+                  ..isActive = isActive
+                  ..updatedAt = DateTime.now();
+                await widget.isar.categorys.put(existing);
+                updated++;
+              } else {
+                // create new
+                final category = Category()
+                  ..name = name
+                  ..description =
+                  description.isEmpty ? null : description
+                  ..isActive = isActive
+                  ..createdAt = DateTime.now()
+                  ..updatedAt = DateTime.now();
+                await widget.isar.categorys.put(category);
+                imported++;
+              }
+            } catch (_) {
+              skipped++;
+            }
+          }
           break; // only first sheet
         }
       });
 
       setState(() {
-        _importStatus =
-        '✅ Imported $imported products. Skipped $skipped rows.';
-        _importStatusColor = Colors.green;
-        _isImporting = false;
+        _categoryImportStatus =
+        '✅ Added $imported, updated $updated categories. Skipped $skipped rows.';
+        _categoryImportStatusColor = Colors.green;
+        _isImportingCategories = false;
       });
     } catch (e) {
       setState(() {
-        _importStatus = '❌ Import failed: $e';
-        _importStatusColor = Colors.red;
-        _isImporting = false;
+        _categoryImportStatus = '❌ Import failed: $e';
+        _categoryImportStatusColor = Colors.red;
+        _isImportingCategories = false;
       });
     }
   }
 
-  Future<void> _downloadTemplate() async {
+  // ── DOWNLOAD TEMPLATES ────────────────────────────────────────
+  Future<void> _downloadProductTemplate() async {
     final rows = [
-      TxnExportRow(
+      excel.TxnExportRow(
         reference: 'PROD001',
         userName: 'Sample Product Name',
         amount: 10.00,
@@ -242,7 +351,7 @@ class ImportExportTabState extends State<ImportExportTab> {
         date: DateTime.now(),
       ),
     ];
-    await ExportService.exportToExcel(
+    await excel.ExportService.exportToExcel(
       context: context,
       transactions: rows,
       fileName: 'product_import_template',
@@ -251,6 +360,32 @@ class ImportExportTabState extends State<ImportExportTab> {
       AppUtil.toastMessage(
         message:
         '✅ Template downloaded — columns: Name, SKU, Category, Cost Price, Selling Price, Stock, Low Stock',
+        context: context,
+        backgroundColor: AppColors.primaryColor,
+      );
+    }
+  }
+
+  Future<void> _downloadCategoryTemplate() async {
+    final rows = [
+      excel.TxnExportRow(
+        reference: '1',
+        userName: 'Sample Category',
+        amount: 0,
+        method: 'Optional description here',
+        status: 'Active',
+        date: DateTime.now(),
+      ),
+    ];
+    await excel.ExportService.exportToExcel(
+      context: context,
+      transactions: rows,
+      fileName: 'category_import_template',
+    );
+    if (context.mounted) {
+      AppUtil.toastMessage(
+        message:
+        '✅ Template downloaded — columns: Name, Description, Status',
         context: context,
         backgroundColor: AppColors.primaryColor,
       );
@@ -305,41 +440,20 @@ class ImportExportTabState extends State<ImportExportTab> {
 
           const SizedBox(height: 28),
 
-          // ── Import ────────────────────────────────────
+          // ── Import Products ───────────────────────────
           SectionTitle(title: 'Import Products'),
           const SizedBox(height: 4),
           const Text(
-            'Upload an Excel file to quickly onboard products. '
-                'Columns must be in order: Name, SKU, Category, '
-                'Cost Price, Selling Price, Stock, Low Stock Alert.',
+            'Upload an Excel file to onboard products. '
+                'Columns: Name, SKU, Category, Cost Price, Selling Price, Stock, Low Stock Alert.',
             style: TextStyle(fontSize: 12, color: Colors.grey),
           ),
           const SizedBox(height: 12),
 
-          // info banner
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.amber.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                  color: Colors.amber.withValues(alpha: 0.3)),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.info_outline,
-                    size: 16, color: Colors.amber),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Download the sample template, fill it in and upload. '
-                        'Products with the same SKU will be updated automatically.',
-                    style: TextStyle(
-                        fontSize: 12, color: Colors.black87),
-                  ),
-                ),
-              ],
-            ),
+          _InfoBanner(
+            message:
+            'Download the sample template, fill it in and upload. '
+                'Products with the same SKU will be updated automatically.',
           ),
           const SizedBox(height: 12),
 
@@ -348,60 +462,163 @@ class ImportExportTabState extends State<ImportExportTab> {
               SizedBox(
                 width: 220,
                 child: ColorBtn(
-                  text: _isImporting
+                  text: _isImportingProducts
                       ? 'Importing...'
-                      : '↑  Import from Excel',
+                      : '↑  Import Products',
                   btnColor: AppColors.secondaryColor,
-                  action: _isImporting ? (){} : _importProducts,
+                  action: _isImportingProducts
+                      ? () {}
+                      : _importProducts,
                 ),
               ),
               const SizedBox(width: 12),
               SizedBox(
                 width: 200,
                 child: ColorBtn(
-                  text: '↓  Download Template',
+                  text: '↓  Product Template',
                   btnColor: AppColors.primaryColor,
-                  action: _downloadTemplate,
+                  action: _downloadProductTemplate,
                 ),
               ),
             ],
           ),
 
-          // import result
-          if (_importStatus != null) ...[
+          if (_productImportStatus != null) ...[
             const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: _importStatusColor.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                    color: _importStatusColor
-                        .withValues(alpha: 0.3)),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    _importStatusColor == Colors.green
-                        ? Icons.check_circle_outline
-                        : Icons.error_outline,
-                    size: 16,
-                    color: _importStatusColor,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(_importStatus!,
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: _importStatusColor,
-                            fontWeight: FontWeight.w500)),
-                  ),
-                ],
-              ),
+            _StatusBanner(
+              message: _productImportStatus!,
+              color: _productImportStatusColor,
             ),
           ],
 
           const SizedBox(height: 24),
+
+          // ── Import Categories ─────────────────────────
+          SectionTitle(title: 'Import Categories'),
+          const SizedBox(height: 4),
+          const Text(
+            'Upload an Excel file to onboard categories. '
+                'Columns: Name, Description (optional), Status (Active/Inactive).',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+          const SizedBox(height: 12),
+
+          _InfoBanner(
+            message:
+            'Download the category template, fill it in and upload. '
+                'Categories with the same name will be updated automatically.',
+          ),
+          const SizedBox(height: 12),
+
+          Row(
+            children: [
+              SizedBox(
+                width: 220,
+                child: ColorBtn(
+                  text: _isImportingCategories
+                      ? 'Importing...'
+                      : '↑  Import Categories',
+                  btnColor: AppColors.secondaryColor,
+                  action: _isImportingCategories
+                      ? () {}
+                      : _importCategories,
+                ),
+              ),
+              const SizedBox(width: 12),
+              SizedBox(
+                width: 200,
+                child: ColorBtn(
+                  text: '↓  Category Template',
+                  btnColor: AppColors.primaryColor,
+                  action: _downloadCategoryTemplate,
+                ),
+              ),
+            ],
+          ),
+
+          if (_categoryImportStatus != null) ...[
+            const SizedBox(height: 12),
+            _StatusBanner(
+              message: _categoryImportStatus!,
+              color: _categoryImportStatusColor,
+            ),
+          ],
+
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Info banner ───────────────────────────────────────────────
+class _InfoBanner extends StatelessWidget {
+  final String message;
+  const _InfoBanner({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.amber.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+        border:
+        Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.info_outline,
+              size: 16, color: Colors.amber),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                  fontSize: 12, color: Colors.black87),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Status banner ─────────────────────────────────────────────
+class _StatusBanner extends StatelessWidget {
+  final String message;
+  final Color color;
+  const _StatusBanner(
+      {required this.message, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            color == Colors.green
+                ? Icons.check_circle_outline
+                : Icons.error_outline,
+            size: 16,
+            color: color,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                  fontSize: 12,
+                  color: color,
+                  fontWeight: FontWeight.w500),
+            ),
+          ),
         ],
       ),
     );

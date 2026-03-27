@@ -40,6 +40,7 @@ class StockMonitorService {
 
   // Track active dialogs to prevent multiple popups
   static bool _isDialogShowing = false;
+  static bool _enablePopupAlerts = true;
 
   /// Stream to listen for low stock count changes
   static Stream<int> get lowStockCountStream => _lowStockCountController.stream;
@@ -49,6 +50,8 @@ class StockMonitorService {
 
   /// Get current low stock count
   static int get currentLowStockCount => _currentLowStockCount;
+
+  static bool get enablePopupAlerts => _enablePopupAlerts;
 
   /// Get current out of stock count
   static int get currentOutOfStockCount => _currentOutOfStockCount;
@@ -306,7 +309,7 @@ class StockMonitorService {
       );
       await isar.notificationCooldowns.put(cooldown);
     });
-
+    if (_settings?.enablePopupAlerts == true) {
     // Platform-specific notification handling
     if (Platform.isWindows) {
       // Show dialog for Windows
@@ -349,6 +352,10 @@ class StockMonitorService {
         body,
         details,
       );
+    }
+    }else {
+      // fallback → silent log or badge update
+      print("🔕 Popup disabled: $title - $body");
     }
   }
 
@@ -512,6 +519,17 @@ class StockMonitorService {
   static void stop() {
     _timer?.cancel();
   }
+
+  static Future<void> setEnablePopupAlerts(bool enabled) async {
+    if (_settings == null) await _initSettings();
+
+
+    _enablePopupAlerts = enabled;
+    _settings!.enablePopupAlerts = _enablePopupAlerts;
+
+    await updateSettings(_settings!);
+  }
+
 
   static void dispose() {
     stop();

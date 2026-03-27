@@ -1,9 +1,10 @@
+import 'package:eswaini_destop_app/ux/models/shared/pos_transaction.dart';
 import 'package:eswaini_destop_app/ux/nav/app_navigator.dart';
 import 'package:eswaini_destop_app/ux/res/app_theme.dart';
 import 'package:eswaini_destop_app/ux/views/components/dialogs/message.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:intl/intl.dart';
+import 'package:isar/isar.dart';
 import '../../../../../platform/utils/constant.dart';
 import '../../../../../platform/utils/isar_manager.dart';
 import '../../../../models/shared/sale_order.dart';
@@ -14,12 +15,10 @@ import '../../../../res/app_strings.dart';
 import '../../../../utils/sessionManager.dart';
 import '../../../../utils/shared/app.dart';
 import '../../../fragements/shared/short_dash_lines.dart';
-import '../../dialogs/logout.dart';
 import '../../dialogs/payment_dailog.dart';
 import '../../shared/btn.dart';
 import '../../shared/cart_total_row.dart';
 import '../../shared/inline_text.dart';
-import '../../shared/receipt_item.dart';
 import '../home/reciept_section.dart';
 
 class SalesCartSection extends StatefulWidget {
@@ -31,6 +30,7 @@ class SalesCartSection extends StatefulWidget {
   final FocusNode focusNode;
   final Function(int) onRemove;
   final Function(int, int) onUpdateQty;
+
   const SalesCartSection({
     super.key,
     required this.cart,
@@ -48,16 +48,25 @@ class SalesCartSection extends StatefulWidget {
 }
 
 class _SalesCartSectionState extends State<SalesCartSection> {
-  @override
-  String txnId = AppTheme.generateTransactionId();
+  // ← fixed: @override removed from here, txnId properly declared
+  late String txnId;
   final sessionManager = SessionManager();
 
   @override
+  void initState() {
+    super.initState();
+    txnId = AppTheme.generateTransactionId(); // ← generate on init
+  }
+
+  @override
   void dispose() {
-    // Do NOT dispose anything here related to focus
     super.dispose();
   }
 
+  // ── Regenerate txnId for next order ──────────────────────────
+  void _regenerateTxnId() {
+    setState(() => txnId = AppTheme.generateTransactionId());
+  }
 
   // ── Save order as pending (no payment) ───────────────────────
   Future<void> _handleSave(BuildContext context) async {
@@ -73,16 +82,16 @@ class _SalesCartSectionState extends State<SalesCartSection> {
           ..items = widget.cart
               .map(
                 (item) => SaleItem()
-                  ..productId = item.product.id
-                  ..productName = item.product.name
-                  ..productSku = item.product.sku
-                  ..barcodeId = item.product.barcodeId
-                  ..unitPrice = item.product.sellingPrice
-                  ..costPrice = item.product.costPrice
-                  ..quantity = item.quantity
-                  ..discount = 0
-                  ..totalPrice = item.total,
-              )
+              ..productId = item.product.id
+              ..productName = item.product.name
+              ..productSku = item.product.sku
+              ..barcodeId = item.product.barcodeId
+              ..unitPrice = item.product.sellingPrice
+              ..costPrice = item.product.costPrice
+              ..quantity = item.quantity
+              ..discount = 0
+              ..totalPrice = item.total,
+          )
               .toList()
           ..subtotal = widget.subtotal
           ..discountAmount = 0
@@ -92,7 +101,6 @@ class _SalesCartSectionState extends State<SalesCartSection> {
           ..note = null
           ..createdByUserId = SessionManager().userId ?? 0
           ..createdAt = DateTime.now();
-
         await isar.saleOrders.put(order);
       });
 
@@ -102,6 +110,7 @@ class _SalesCartSectionState extends State<SalesCartSection> {
           context: context,
           backgroundColor: Colors.green,
         );
+        _regenerateTxnId(); // ← new ID for next order
         widget.onClear();
       }
     } catch (e) {
@@ -119,39 +128,60 @@ class _SalesCartSectionState extends State<SalesCartSection> {
   Future<void> _handleProceed(BuildContext context) async {
     if (widget.cart.isEmpty) return;
     widget.focusNode.unfocus();
+print("pushing  payment daliog");
     final result = await AppUtil.displayDialog(
       context: context,
       dismissible: false,
       child: PaymentDialog(
         total: widget.total,
-        subtotal:widget.subtotal,
+        subtotal: widget.subtotal,
         tax: widget.tax,
-        cart:widget. cart,
+        cart: widget.cart,
+        transactionId: txnId,
       ),
     );
-
+    print("done with   payment daliog");
     if (result == true && context.mounted) {
+      print("done getting the transaction");
+      final isar = IsarService.db;
+
+      final existingTransaction = await isar.posTransactions
+          .filter()
+          .transactionNumberEqualTo(txnId)
+          .findFirst();
+      print(" transaction data ${existingTransaction?.id}");
+      final existingOrder = await isar.saleOrders
+          .filter()
+          .orderNumberEqualTo(
+          existingTransaction?.orderNumber ?? '')
+          .findFirst();
+print("working oo ${existingOrder!.totalAmount.toString()}");
+print(existingOrder.status.toString());
+print(existingOrder.orderNumber.toString());
+print(existingOrder.id.toString());
       final data = TransactionData(
-        tax:widget. tax,
-        total:widget. total,
+        tax: widget.tax,
+        total: widget.total,
         dateTime: DateTime.now(),
-        subtotal:widget. subtotal,
+        subtotal: widget.subtotal,
         txnID: txnId,
-        cart:widget. cart,
+        cart: widget.cart,
+        transaction: existingTransaction,
+        order: existingOrder,
       );
+
+      _regenerateTxnId(); // ← new ID ready for next sale
       widget.focusNode.requestFocus();
       AppNavigator.gotoHome(data, context: context);
-     widget. onClear();
-    }else {
-      // If user cancels dialog → also restore focus
+      widget.onClear();
+    } else {
+      // cancelled — restore focus
       widget.focusNode.requestFocus();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-
-
     return leftCardSection(
       sideChild: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -169,7 +199,8 @@ class _SalesCartSectionState extends State<SalesCartSection> {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color: AppColors.primaryColor.withValues(alpha: 0.3),
+                  color: AppColors.primaryColor
+                      .withValues(alpha: 0.3),
                 ),
               ),
               child: Column(
@@ -177,7 +208,8 @@ class _SalesCartSectionState extends State<SalesCartSection> {
                   // logo
                   Center(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      padding:
+                      const EdgeInsets.symmetric(vertical: 8),
                       child: SvgPicture.asset(
                         AppDrawables.darkLogoSVG,
                         width: 100,
@@ -200,14 +232,12 @@ class _SalesCartSectionState extends State<SalesCartSection> {
                   if (sessionManager.companyAddress != null)
                     Text(
                       sessionManager.companyAddress!,
-                      style: const TextStyle(fontSize: 8, color: Colors.grey),
+                      style: const TextStyle(
+                          fontSize: 8, color: Colors.grey),
                       textAlign: TextAlign.center,
                     ),
 
                   const SizedBox(height: 4),
-
-
-                  // receipt meta
 
                   // cart header
                   if (widget.cart.isNotEmpty)
@@ -217,7 +247,8 @@ class _SalesCartSectionState extends State<SalesCartSection> {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.primaryColor.withValues(alpha: 0.1),
+                        color: AppColors.primaryColor
+                            .withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: const Row(
@@ -232,7 +263,6 @@ class _SalesCartSectionState extends State<SalesCartSection> {
                               ),
                             ),
                           ),
-
                           Expanded(
                             child: Text(
                               'Total',
@@ -251,143 +281,167 @@ class _SalesCartSectionState extends State<SalesCartSection> {
 
                   // cart items
                   Expanded(
-                    child:widget. cart.isEmpty
+                    child: widget.cart.isEmpty
                         ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                SvgPicture.asset(
-                                  AppDrawables.emptyReceiptSVG,
-                                  width: 100,
-                                  height: 40,
-                                  fit: BoxFit.fitWidth,
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'Cart is Empty',
-                                  style: TextStyle(
-                                    color: AppColors.primaryColor,
-                                    fontFamily: 'Gilroy',
-                                  ),
-                                ),
-                              ],
+                      child: Column(
+                        mainAxisAlignment:
+                        MainAxisAlignment.center,
+                        children: [
+                          SvgPicture.asset(
+                            AppDrawables.emptyReceiptSVG,
+                            width: 100,
+                            height: 40,
+                            fit: BoxFit.fitWidth,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Cart is Empty',
+                            style: TextStyle(
+                              color: AppColors.primaryColor,
+                              fontFamily: 'Gilroy',
                             ),
-                          )
+                          ),
+                        ],
+                      ),
+                    )
                         : ListView.separated(
-                            padding: EdgeInsets.zero,
-                            itemCount:widget. cart.length,
-                            separatorBuilder: (_, __) => Divider(
-                              height: 1,
-                              color: Colors.grey.withValues(alpha: 0.15),
-                            ),
-                            itemBuilder: (context, index) {
-                              final item =widget. cart[index];
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 4,
-                                ),
-                                child: Row(
+                      padding: EdgeInsets.zero,
+                      itemCount: widget.cart.length,
+                      separatorBuilder: (_, __) => Divider(
+                        height: 1,
+                        color: Colors.grey
+                            .withValues(alpha: 0.15),
+                      ),
+                      itemBuilder: (context, index) {
+                        final item = widget.cart[index];
+                        return Padding(
+                          padding:
+                          const EdgeInsets.symmetric(
+                            vertical: 4,
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                flex: 2,
+                                child: Column(
+                                  mainAxisAlignment:
+                                  MainAxisAlignment
+                                      .start,
+                                  crossAxisAlignment:
+                                  CrossAxisAlignment
+                                      .start,
                                   children: [
-                                    Expanded(
-                                      flex: 2,
-                                      child:Column(
-                                        mainAxisAlignment: MainAxisAlignment.start,
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                        Text(
-                                          item.product.name,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(fontSize: 12),
-                                        ),
-                                        SizedBox(height: 2,),
-                                        Row(
-                                          mainAxisAlignment:
-                                          MainAxisAlignment.start,
-                                          children: [
-                                            _QtyBtn(
-                                              icon: Icons.remove,
-                                              onTap: () =>widget. onUpdateQty(
-                                                index,
-                                                item.quantity - 1,
-                                              ),
-                                            ),
-
-                                            Container(
-                                              width: 22,
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 1,
-                                              ),
-                                              alignment: Alignment.center,
-                                              child: Text(
-                                                '${item.quantity}',
-                                                style: const TextStyle(
-                                                  fontSize: 11,
-                                                ),
-                                              ),
-                                            ),
-                                            _QtyBtn(
-                                              icon: Icons.add,
-                                              onTap: () =>widget. onUpdateQty(
-                                                index,
-                                                item.quantity + 1,
-                                              ),
-                                            ),
-                                          ],
-                                        )
-                                      ],)
-
+                                    Text(
+                                      item.product.name,
+                                      maxLines: 1,
+                                      overflow:
+                                      TextOverflow
+                                          .ellipsis,
+                                      style:
+                                      const TextStyle(
+                                          fontSize: 12),
                                     ),
+                                    const SizedBox(
+                                        height: 2),
+                                    Row(
+                                      mainAxisAlignment:
+                                      MainAxisAlignment
+                                          .start,
+                                      children: [
+                                        _QtyBtn(
+                                          icon: Icons.remove,
+                                          onTap: () =>
+                                              widget
+                                                  .onUpdateQty(
+                                                index,
+                                                item.quantity -
+                                                    1,
+                                              ),
+                                        ),
+                                        Container(
+                                          width: 22,
+                                          padding:
+                                          const EdgeInsets
+                                              .symmetric(
+                                              horizontal:
+                                              1),
+                                          alignment:
+                                          Alignment
+                                              .center,
+                                          child: Text(
+                                            '${item.quantity}',
+                                            style:
+                                            const TextStyle(
+                                                fontSize:
+                                                11),
+                                          ),
+                                        ),
+                                        _QtyBtn(
+                                          icon: Icons.add,
+                                          onTap: () =>
+                                              widget
+                                                  .onUpdateQty(
+                                                index,
+                                                item.quantity +
+                                                    1,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
 
-                                    Expanded(
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.end,
-                                        children: [
-                                          Text(
-                                            '${ConstantUtil.currencySymbol} ${item.total.toStringAsFixed(2)}',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color: AppColors.primaryColor,
-                                            ),
-                                          ),
-                                          IconButton(
-                                            onPressed: () => widget.onRemove(index),
-                                            icon: const Icon(
-                                              Icons.close,
-                                              size: 16,
-                                              color: Colors.red,
-                                            ),
-                                          ),
-                                        ],
+                              Expanded(
+                                child: Row(
+                                  mainAxisAlignment:
+                                  MainAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      '${ConstantUtil.currencySymbol} ${item.total.toStringAsFixed(2)}',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: AppColors
+                                            .primaryColor,
+                                      ),
+                                    ),
+                                    IconButton(
+                                      onPressed: () =>
+                                          widget
+                                              .onRemove(index),
+                                      icon: const Icon(
+                                        Icons.close,
+                                        size: 16,
+                                        color: Colors.red,
                                       ),
                                     ),
                                   ],
                                 ),
-                              );
-                            },
+                              ),
+                            ],
                           ),
+                        );
+                      },
+                    ),
                   ),
 
                   // totals
                   if (widget.cart.isNotEmpty) ...[
-                    const DashedLine(
-                    ),
-                    //Divider(color: Colors.grey.withValues(alpha: 0.3)),
+                    const DashedLine(),
                     TotalRow(
                       label: AppStrings.subTotal,
                       value:
-                          '${ConstantUtil.currencySymbol} ${widget.subtotal.toStringAsFixed(2)}',
+                      '${ConstantUtil.currencySymbol} ${widget.subtotal.toStringAsFixed(2)}',
                     ),
                     TotalRow(
                       label: AppStrings.tax,
                       value:
-                          '${ConstantUtil.currencySymbol} ${widget.tax.toStringAsFixed(2)}',
+                      '${ConstantUtil.currencySymbol} ${widget.tax.toStringAsFixed(2)}',
                     ),
                     TotalRow(
-                      label: AppStrings.subTotal,
+                      label: AppStrings.total, // ← fixed from subTotal
                       value:
-                          '${ConstantUtil.currencySymbol} ${widget.total.toStringAsFixed(2)}',
+                      '${ConstantUtil.currencySymbol} ${widget.total.toStringAsFixed(2)}',
                       isBold: true,
                     ),
                   ],
@@ -403,45 +457,41 @@ class _SalesCartSectionState extends State<SalesCartSection> {
             children: [
               Expanded(
                 child: Btn(
-                  isActive: widget.cart.isEmpty ? false : true,
+                  isActive: widget.cart.isNotEmpty,
                   onTap: widget.cart.isEmpty
-                      ? () {
-                          AppUtil.toastMessage(
-                            message: AppStrings.sorryYourCartIsEmpty,
-                            context: context,
-                            backgroundColor: Colors.grey,
-                          );
-                        }
+                      ? () => AppUtil.toastMessage(
+                    message:
+                    AppStrings.sorryYourCartIsEmpty,
+                    context: context,
+                    backgroundColor: Colors.grey,
+                  )
                       : () async {
-                          bool res = await AppUtil.displayDialog(
-                            dismissible: false,
-                            context: context,
-                            child: MessageDialog(
-                              title: AppStrings.confirmation,
-                              message: AppStrings.areYouSureYouWantToSave,
-                              // Now safe to use !
-                            ),
-                          );
-                          if (!context.mounted) return;
-                          if (res) {
-                            _handleSave(context);
-                          }
-                        }, // ← now saves order
+                    final res = await AppUtil.displayDialog(
+                      dismissible: false,
+                      context: context,
+                      child: MessageDialog(
+                        title: AppStrings.confirmation,
+                        message:
+                        AppStrings.areYouSureYouWantToSave,
+                      ),
+                    );
+                    if (!context.mounted) return;
+                    if (res == true) _handleSave(context);
+                  },
                   text: AppStrings.save,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Btn(
-                  isActive:widget. cart.isEmpty ? false : true,
-                  onTap:widget. cart.isEmpty
-                      ? () {
-                          AppUtil.toastMessage(
-                            message: AppStrings.sorryYourCartIsEmpty,
-                            context: context,
-                            backgroundColor: Colors.grey,
-                          );
-                        }
+                  isActive: widget.cart.isNotEmpty,
+                  onTap: widget.cart.isEmpty
+                      ? () => AppUtil.toastMessage(
+                    message:
+                    AppStrings.sorryYourCartIsEmpty,
+                    context: context,
+                    backgroundColor: Colors.grey,
+                  )
                       : () => _handleProceed(context),
                   bgImage: AppDrawables.greenCard,
                   text: AppStrings.proceed,
@@ -453,19 +503,20 @@ class _SalesCartSectionState extends State<SalesCartSection> {
           const SizedBox(height: 8),
 
           Btn(
-            isActive:widget. cart.isEmpty ? false : true,
+            isActive: widget.cart.isNotEmpty,
             onTap: () async {
-              bool res = await AppUtil.displayDialog(
+              if (widget.cart.isEmpty) return;
+              final res = await AppUtil.displayDialog(
                 dismissible: false,
                 context: context,
                 child: MessageDialog(
                   title: AppStrings.confirmation,
                   message: AppStrings.areYouSureYouWantToCart,
-                  // Now safe to use !
                 ),
               );
               if (!context.mounted) return;
-              if (res) {
+              if (res == true) {
+                _regenerateTxnId(); // ← new ID when cart is cleared
                 widget.onClear();
               }
             },
@@ -477,7 +528,6 @@ class _SalesCartSectionState extends State<SalesCartSection> {
     );
   }
 }
-
 
 // ── Qty button ────────────────────────────────────────────────
 class _QtyBtn extends StatelessWidget {

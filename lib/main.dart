@@ -1,4 +1,7 @@
 
+import 'dart:io';
+import 'dart:ui';
+
 import 'package:eswaini_destop_app/platform/utils/isar_manager.dart';
 import 'package:eswaini_destop_app/ux/blocs/screens/splash/bloc.dart';
 import 'package:eswaini_destop_app/ux/res/app_colors.dart';
@@ -9,6 +12,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
+import 'package:screen_retriever/screen_retriever.dart';
+import 'package:window_manager/window_manager.dart';
 
 
 
@@ -16,11 +21,32 @@ final locator = GetIt.instance;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  if(Platform.isWindows){
+    await windowManager.ensureInitialized();
+    Display primaryDisplay = await screenRetriever.getPrimaryDisplay();
+
+    // 2. Grab the full size of the hardware screen
+    Size screenSize = primaryDisplay.size;
+    WindowOptions windowOptions = WindowOptions(
+      size: screenSize,          // Set to the detected screen width/height
+      center: true,
+      fullScreen: true,         // Set to true if you want to hide the dock/taskbar
+      backgroundColor: Colors.transparent,
+      skipTaskbar: true,
+      titleBarStyle: TitleBarStyle.normal,
+    );
+    windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      await windowManager.focus();
+      await windowManager.maximize();
+    });
+  }
   try {
     await IsarService().init();
-    print("✅ Isar initialized");
+
+
   } catch (e, stacktrace) {
-    print("❌ Isar init failed: $e");
+
     print(stacktrace);
   }
 

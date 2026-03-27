@@ -8,6 +8,7 @@ import 'package:eswaini_destop_app/ux/models/shared/pos_transaction.dart';
 
 import '../../ux/models/shared/company.dart';
 import '../../ux/models/shared/inventory.dart';
+import '../../ux/models/shared/notification_cooldown.dart';
 import '../../ux/models/shared/notification_settings.dart';
 import '../../ux/models/shared/remember_me_entity.dart';
 
@@ -31,25 +32,10 @@ class IsarService {
         PosTransactionSchema,
         CompanySchema,
         RememberMeEntitySchema,
-        NotificationSettingsSchema
+        NotificationSettingsSchema,
+        NotificationCooldownSchema
       ],
       directory: dir.path,
     );
   }
 }
-
-// // save company
-// await isar.writeTxn(() async {
-// await isar.companys.put(Company()
-// ..name = 'Acme POS'
-// ..slogan = 'Fast and Reliable'   // optional, can be null
-// ..email = 'info@acmepos.com'
-// ..contactOne = '+268 7654 3210'
-// ..contactTwo = '+268 7654 3211'
-// ..createdAt = DateTime.now()
-// ..updatedAt = DateTime.now());
-// });
-
-
-// get company
-// final company = await isar.companys.where().findFirst();

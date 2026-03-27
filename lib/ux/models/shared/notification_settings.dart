@@ -9,6 +9,7 @@ class NotificationSettings {
   late bool enableNotifications;
   late bool enableLowStockAlerts;
   late bool enableOutOfStockAlerts;
+  late bool enablePopupAlerts;
   late int checkIntervalSeconds; // 15, 30, 60, etc.
   late int cooldownMinutes; // Cooldown period between notifications for same product
   late bool quietMode; // Silence all notifications during quiet hours
@@ -22,6 +23,7 @@ class NotificationSettings {
     this.checkIntervalSeconds = 30,
     this.cooldownMinutes = 5,
     this.quietMode = false,
+    this. enablePopupAlerts = true,
     this.quietModeStartHour = 22, // 10 PM
     this.quietModeEndHour = 7,    // 7 AM
   });

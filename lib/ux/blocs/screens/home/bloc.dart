@@ -1,5 +1,7 @@
 import "dart:async";
 
+import "package:eswaini_destop_app/ux/utils/sessionManager.dart";
+import "package:eswaini_destop_app/ux/utils/shared/app.dart";
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
 import "../../../models/screens/home/flow_item.dart";
@@ -50,10 +52,17 @@ metaData = event.item;
           );
           break;
         case AppStrings.reports:
-          AppNavigator.gotoReports(
-            context: sectionContext,
-            data: event.item,
-          );
+         if(SessionManager().isCashier){
+           AppUtil.toastMessage(message: 'Sorry, Your Not Approve For This Feature.',
+               backgroundColor: Colors.amber,
+               context: sectionContext);
+         } else{
+           AppNavigator.gotoReports(
+             context: sectionContext,
+             data: event.item,
+           );
+         }
+
           break;
           case AppStrings.savedSales:
           AppNavigator.gotoSalesOrder(
@@ -67,35 +76,7 @@ metaData = event.item;
       }
     });
 
-    on<HomeSwitchTab>((event, emit) async {
-      final activeIndex = event.activeTab;
 
-      // switch (activeIndex) {
-      //   case 1:
-      //     AppNavigator.gotoTrans(
-      //       context: sectionContext,
-      //       range: AppUtil.getDateRange(
-      //         filterRequest: TransactionsDateFilter.today,
-      //       ),
-      //     );
-      //     break;
-      //
-      //   case 2:
-      //     AppNavigator.gotoSettings(context: sectionContext);
-      //     break;
-      //   case 0:
-      //     AppNavigator.gotoHome(context: sectionContext);
-      //     break;
-      //
-      //   default:
-      //     AppNavigator.gotoHome(context: sectionContext);
-      // }
-    });
-    on<HomeLogoutEvent>((event, emit) {
-      // AppNavigator.logout(
-      //   context: sectionContext,
-      // );
-    });
 
 
   }

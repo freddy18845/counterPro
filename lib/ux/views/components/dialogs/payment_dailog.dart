@@ -20,6 +20,7 @@ class PaymentDialog extends StatefulWidget {
   final double subtotal;
   final double tax;
   final List cart;
+  final String transactionId;
   final int? existingOrderId; // ← add this
 
   const PaymentDialog({
@@ -28,7 +29,7 @@ class PaymentDialog extends StatefulWidget {
     required this.subtotal,
     required this.tax,
     required this.cart,
-    this.existingOrderId,
+    this.existingOrderId, required this.transactionId,
   });
 
   @override
@@ -64,7 +65,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
   Future<void> _confirmPayment() async {
     if (!_canProceed) {
       AppUtil.toastMessage(
-        message: 'Amount paid is less than total',
+        message: 'Amount Paid Is Less than Total',
         context: context,
         backgroundColor: Colors.red,
       );
@@ -93,7 +94,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
         } else {
           // ── New order from sales screen ────────────────
           final order = SaleOrder()
-            ..orderNumber = AppTheme.generateTransactionId()
+            ..orderNumber = widget.transactionId
             ..status = SaleOrderStatus.completed
             ..items = widget.cart
                 .map((item) => SaleItem()
@@ -120,13 +121,13 @@ class _PaymentDialogState extends State<PaymentDialog> {
 
         // ── Save transaction ───────────────────────────
         final txn = PosTransaction()
-          ..transactionNumber = AppTheme.generateTransactionId()
+          ..transactionNumber = widget.transactionId
           ..saleOrderId = orderId
         // replace the orderNumber line in txn with this
           ..orderNumber = widget.existingOrderId != null
               ? (await isar.saleOrders.get(widget.existingOrderId!))?.orderNumber ??
-              AppTheme.generateTransactionId()
-              : AppTheme.generateTransactionId()
+              widget.transactionId
+              : widget.transactionId
           ..paymentMethod = _selectedMethod
           ..status = PosTransactionStatus.completed
           ..amountPaid = _amountPaid

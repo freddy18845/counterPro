@@ -1,5 +1,8 @@
 import 'dart:convert';
 
+import 'package:eswaini_destop_app/ux/models/shared/pos_transaction.dart';
+import 'package:eswaini_destop_app/ux/models/shared/sale_order.dart';
+
 TransactionData transactionDataFromJson(String str) =>
     TransactionData.fromJson(json.decode(str));
 
@@ -12,6 +15,8 @@ class TransactionData {
   String? txnID;
   double? subtotal;
   double? tax;
+  PosTransaction? transaction;
+  SaleOrder? order;
   List<dynamic>? cart;
 
   TransactionData({
@@ -21,6 +26,8 @@ class TransactionData {
     this.subtotal,
     this.tax,
     this.cart,
+    this.transaction,
+    this.order,
   });
 
   /// COPY WITH
@@ -30,6 +37,8 @@ class TransactionData {
     String? txnID,
     double? subtotal,
     double? tax,
+    PosTransaction? transaction,
+    SaleOrder? order,
     List<dynamic>? cart,
   }) {
     return TransactionData(
@@ -39,6 +48,8 @@ class TransactionData {
       subtotal: subtotal ?? this.subtotal,
       tax: tax ?? this.tax, // ✅ FIXED (was wrong before)
       cart: cart ?? this.cart,
+      order: order ?? this.order,
+      transaction: transaction ?? this.transaction,
     );
   }
 

@@ -43,18 +43,23 @@ const NotificationSettingsSchema = CollectionSchema(
       name: r'enableOutOfStockAlerts',
       type: IsarType.bool,
     ),
-    r'quietMode': PropertySchema(
+    r'enablePopupAlerts': PropertySchema(
       id: 5,
+      name: r'enablePopupAlerts',
+      type: IsarType.bool,
+    ),
+    r'quietMode': PropertySchema(
+      id: 6,
       name: r'quietMode',
       type: IsarType.bool,
     ),
     r'quietModeEndHour': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'quietModeEndHour',
       type: IsarType.long,
     ),
     r'quietModeStartHour': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'quietModeStartHour',
       type: IsarType.long,
     )
@@ -93,9 +98,10 @@ void _notificationSettingsSerialize(
   writer.writeBool(offsets[2], object.enableLowStockAlerts);
   writer.writeBool(offsets[3], object.enableNotifications);
   writer.writeBool(offsets[4], object.enableOutOfStockAlerts);
-  writer.writeBool(offsets[5], object.quietMode);
-  writer.writeLong(offsets[6], object.quietModeEndHour);
-  writer.writeLong(offsets[7], object.quietModeStartHour);
+  writer.writeBool(offsets[5], object.enablePopupAlerts);
+  writer.writeBool(offsets[6], object.quietMode);
+  writer.writeLong(offsets[7], object.quietModeEndHour);
+  writer.writeLong(offsets[8], object.quietModeStartHour);
 }
 
 NotificationSettings _notificationSettingsDeserialize(
@@ -110,9 +116,10 @@ NotificationSettings _notificationSettingsDeserialize(
     enableLowStockAlerts: reader.readBoolOrNull(offsets[2]) ?? true,
     enableNotifications: reader.readBoolOrNull(offsets[3]) ?? true,
     enableOutOfStockAlerts: reader.readBoolOrNull(offsets[4]) ?? true,
-    quietMode: reader.readBoolOrNull(offsets[5]) ?? false,
-    quietModeEndHour: reader.readLongOrNull(offsets[6]) ?? 7,
-    quietModeStartHour: reader.readLongOrNull(offsets[7]) ?? 22,
+    enablePopupAlerts: reader.readBoolOrNull(offsets[5]) ?? true,
+    quietMode: reader.readBoolOrNull(offsets[6]) ?? false,
+    quietModeEndHour: reader.readLongOrNull(offsets[7]) ?? 7,
+    quietModeStartHour: reader.readLongOrNull(offsets[8]) ?? 22,
   );
   object.id = id;
   return object;
@@ -136,10 +143,12 @@ P _notificationSettingsDeserializeProp<P>(
     case 4:
       return (reader.readBoolOrNull(offset) ?? true) as P;
     case 5:
-      return (reader.readBoolOrNull(offset) ?? false) as P;
+      return (reader.readBoolOrNull(offset) ?? true) as P;
     case 6:
-      return (reader.readLongOrNull(offset) ?? 7) as P;
+      return (reader.readBoolOrNull(offset) ?? false) as P;
     case 7:
+      return (reader.readLongOrNull(offset) ?? 7) as P;
+    case 8:
       return (reader.readLongOrNull(offset) ?? 22) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -380,6 +389,16 @@ extension NotificationSettingsQueryFilter on QueryBuilder<NotificationSettings,
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'enableOutOfStockAlerts',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<NotificationSettings, NotificationSettings,
+      QAfterFilterCondition> enablePopupAlertsEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'enablePopupAlerts',
         value: value,
       ));
     });
@@ -643,6 +662,20 @@ extension NotificationSettingsQuerySortBy
   }
 
   QueryBuilder<NotificationSettings, NotificationSettings, QAfterSortBy>
+      sortByEnablePopupAlerts() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'enablePopupAlerts', Sort.asc);
+    });
+  }
+
+  QueryBuilder<NotificationSettings, NotificationSettings, QAfterSortBy>
+      sortByEnablePopupAlertsDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'enablePopupAlerts', Sort.desc);
+    });
+  }
+
+  QueryBuilder<NotificationSettings, NotificationSettings, QAfterSortBy>
       sortByQuietMode() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'quietMode', Sort.asc);
@@ -758,6 +791,20 @@ extension NotificationSettingsQuerySortThenBy
   }
 
   QueryBuilder<NotificationSettings, NotificationSettings, QAfterSortBy>
+      thenByEnablePopupAlerts() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'enablePopupAlerts', Sort.asc);
+    });
+  }
+
+  QueryBuilder<NotificationSettings, NotificationSettings, QAfterSortBy>
+      thenByEnablePopupAlertsDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'enablePopupAlerts', Sort.desc);
+    });
+  }
+
+  QueryBuilder<NotificationSettings, NotificationSettings, QAfterSortBy>
       thenById() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.asc);
@@ -852,6 +899,13 @@ extension NotificationSettingsQueryWhereDistinct
   }
 
   QueryBuilder<NotificationSettings, NotificationSettings, QDistinct>
+      distinctByEnablePopupAlerts() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'enablePopupAlerts');
+    });
+  }
+
+  QueryBuilder<NotificationSettings, NotificationSettings, QDistinct>
       distinctByQuietMode() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'quietMode');
@@ -913,6 +967,13 @@ extension NotificationSettingsQueryProperty on QueryBuilder<
       enableOutOfStockAlertsProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'enableOutOfStockAlerts');
+    });
+  }
+
+  QueryBuilder<NotificationSettings, bool, QQueryOperations>
+      enablePopupAlertsProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'enablePopupAlerts');
     });
   }
 

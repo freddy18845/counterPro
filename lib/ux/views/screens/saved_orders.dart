@@ -1,5 +1,6 @@
 import "dart:async";
 import "package:eswaini_destop_app/ux/models/screens/home/flow_item.dart";
+import "package:eswaini_destop_app/ux/res/app_theme.dart";
 import "package:eswaini_destop_app/ux/views/components/dialogs/message.dart";
 import "package:flutter/cupertino.dart";
 import "package:flutter/material.dart";
@@ -139,7 +140,7 @@ class _SavedOrdersScreenState extends State<SavedOrdersScreen> {
         cart: order.items
             .map((item) => CartItemFromOrder(item: item))
             .toList(),
-        existingOrderId: order.id,
+        existingOrderId: order.id, transactionId:AppTheme.generateTransactionId(),
       ),
     );
 
@@ -446,12 +447,7 @@ class _SavedOrdersScreenState extends State<SavedOrdersScreen> {
   }
 }
 
-// ── Cart item wrapper for resuming orders ─────────────────────
 
-
-
-
-// ── Confirm cancel dialog ─────────────────────────────────────
 
 
 

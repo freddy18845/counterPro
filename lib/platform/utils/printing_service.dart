@@ -1,361 +1,898 @@
+
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:esc_pos_utils/esc_pos_utils.dart';
+import 'package:eswaini_destop_app/platform/utils/constant.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:usb_serial/usb_serial.dart';
 import 'package:bluetooth_print/bluetooth_print.dart';
 import 'package:bluetooth_print/bluetooth_print_model.dart';
-
 import 'package:image/image.dart' as img;
+import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../ux/models/shared/sale_order.dart';
+import '../../ux/models/shared/pos_transaction.dart';
+import '../../ux/utils/sessionManager.dart';
 
 class PrinterManager {
+  // ── Singleton ─────────────────────────────────────────────
   static final PrinterManager _instance = PrinterManager._internal();
   factory PrinterManager() => _instance;
   PrinterManager._internal();
 
   UsbPort? _usbPort;
-
   final BluetoothPrint _bluetooth = BluetoothPrint.instance;
   bool _bluetoothConnected = false;
-
   String _connectionType = ''; // 'usb' or 'bluetooth'
 
-  // ──────────────────────────────
-  // 🔌 CONNECT USB
-  Future<void> connectUSB() async {
-    final devices = await UsbSerial.listDevices();
+  // saved printer address for auto-reconnect
+  static const _prefKey = 'saved_printer_address';
 
-    if (devices.isEmpty) {
-      print('❌ No USB devices found');
-      return;
+  // ── Connection state ──────────────────────────────────────
+  bool get isConnected =>
+      _connectionType == 'usb' ||
+          (_connectionType == 'bluetooth' && _bluetoothConnected);
+
+  String get connectionType => _connectionType;
+
+  // ─────────────────────────────────────────────────────────
+  // ── USB CONNECTION ────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────
+  Future<bool> connectUSB() async {
+    try {
+      final devices = await UsbSerial.listDevices();
+
+      if (devices.isEmpty) {
+        debugPrint('❌ No USB devices found');
+        return false;
+      }
+
+      _usbPort = await devices.first.create();
+
+      if (!await _usbPort!.open()) {
+        debugPrint('❌ Failed to open USB port');
+        return false;
+      }
+
+      await _usbPort!.setDTR(true);
+      await _usbPort!.setRTS(true);
+      await _usbPort!.setPortParameters(
+        9600,
+        UsbPort.DATABITS_8,
+        UsbPort.STOPBITS_1,
+        UsbPort.PARITY_NONE,
+      );
+
+      _connectionType = 'usb';
+      debugPrint('✅ USB connected');
+      return true;
+    } catch (e) {
+      debugPrint('❌ USB connect error: $e');
+      return false;
     }
-
-    _usbPort = await devices.first.create();
-
-    if (!await _usbPort!.open()) {
-      print('❌ Failed to open USB port');
-      return;
-    }
-
-    await _usbPort!.setDTR(true);
-    await _usbPort!.setRTS(true);
-    await _usbPort!.setPortParameters(
-      9600,
-      UsbPort.DATABITS_8,
-      UsbPort.STOPBITS_1,
-      UsbPort.PARITY_NONE,
-    );
-
-    _connectionType = 'usb';
-    print('✅ USB connected');
   }
 
-  // ──────────────────────────────
-  // 🔵 CONNECT BLUETOOTH
-  Future<void> connectBluetooth(BluetoothDevice device) async {
-    bool result = await _bluetooth.connect(device);
-    _bluetoothConnected = result;
+  Future<void> disconnectUSB() async {
+    await _usbPort?.close();
+    _usbPort = null;
+    _connectionType = '';
+  }
 
-    if (result) {
-      _connectionType = 'bluetooth';
-      print('✅ Bluetooth connected');
-    } else {
-      print('❌ Bluetooth connection failed');
+  // ─────────────────────────────────────────────────────────
+  // ── BLUETOOTH CONNECTION ──────────────────────────────────
+  // ─────────────────────────────────────────────────────────
+  Future<List<BluetoothDevice>> scanBluetooth() async {
+    final devices = <BluetoothDevice>[];
+    _bluetooth.scanResults.listen((results) {
+      devices.clear();
+      devices.addAll(results);
+    });
+    await _bluetooth.startScan(
+        timeout: const Duration(seconds: 4));
+    return devices;
+  }
+
+  Future<bool> connectBluetooth(BluetoothDevice device) async {
+    try {
+      final result = await _bluetooth.connect(device);
+      _bluetoothConnected = result;
+
+      if (result) {
+        _connectionType = 'bluetooth';
+        // save for auto-reconnect
+        await _savePrinterAddress(device.address ?? '');
+        debugPrint('✅ Bluetooth connected: ${device.name}');
+      } else {
+        debugPrint('❌ Bluetooth connection failed');
+      }
+      return result;
+    } catch (e) {
+      debugPrint('❌ Bluetooth connect error: $e');
+      return false;
     }
   }
 
-  // ──────────────────────────────
-  // 🧾 BUILD USB RECEIPT (ESC/POS)
+  Future<void> disconnectBluetooth() async {
+    await _bluetooth.disconnect();
+    _bluetoothConnected = false;
+    _connectionType = '';
+  }
+
+  // ── Auto-reconnect saved printer ─────────────────────────
+  Future<void> autoReconnect() async {
+    final address = await _getSavedPrinterAddress();
+    if (address == null || address.isEmpty) return;
+
+    _bluetooth.scanResults.listen((devices) async {
+      for (final d in devices) {
+        if (d.address == address) {
+          await connectBluetooth(d);
+          debugPrint('✅ Auto-reconnected to ${d.name}');
+          return;
+        }
+      }
+    });
+
+    await _bluetooth.startScan(
+        timeout: const Duration(seconds: 3));
+  }
+
+  Future<void> _savePrinterAddress(String address) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_prefKey, address);
+  }
+
+  Future<String?> _getSavedPrinterAddress() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_prefKey);
+  }
+
+  Future<void> clearSavedPrinter() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_prefKey);
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // ── BUILD USB RECEIPT (ESC/POS) ───────────────────────────
+  // ─────────────────────────────────────────────────────────
   Future<List<int>> _buildUsbReceipt({
-    required String storeName,
-    required String address,
-    required List<Map<String, dynamic>> items,
-    required double total,
-    required double vat,
-    required String paymentMethod,
-    String? qrData,
-    String? barcodeData,
+    required SaleOrder order,
+    required PosTransaction transaction,
+    bool isDuplicate = false,
   }) async {
     final profile = await CapabilityProfile.load();
     final generator = Generator(PaperSize.mm58, profile);
-
+    final session = SessionManager();
     List<int> bytes = [];
 
-    // Logo
+    // ── Logo ───────────────────────────────────────────────
     try {
-      final data = await rootBundle.load('assets/logo.png');
-      final image = img.decodeImage(data.buffer.asUint8List());
-      if (image != null) {
-        bytes += generator.image(image, align: PosAlign.center);
+      if (session.companyLogoPath != null) {
+        final data =
+        await rootBundle.load(session.companyLogoPath!);
+        final image =
+        img.decodeImage(data.buffer.asUint8List());
+        if (image != null) {
+          bytes += generator.image(image,
+              align: PosAlign.center);
+          bytes += generator.feed(1);
+        }
       }
-    } catch (_) {}
+    } catch (_) {
+      // logo not available — skip
+    }
 
-    // Header
+    // ── Company header ─────────────────────────────────────
     bytes += generator.text(
-      storeName,
-      styles: PosStyles(
+      session.companyName ?? 'CounterPro',
+      styles: const PosStyles(
         align: PosAlign.center,
         bold: true,
         height: PosTextSize.size2,
+        width: PosTextSize.size2,
       ),
     );
 
-    bytes += generator.text(address,
-        styles: PosStyles(align: PosAlign.center));
-
-    bytes += generator.hr();
-
-    // Items
-    for (var item in items) {
-      bytes += generator.row([
-        PosColumn(text: item['name'], width: 6),
-        PosColumn(
-            text:
-            '${item['qty']} x ${item['price'].toStringAsFixed(2)}',
-            width: 6),
-      ]);
-    }
-
-    bytes += generator.hr();
-
-    // Totals
-    bytes += generator.text('VAT: ${vat.toStringAsFixed(2)}');
-
-    bytes += generator.text(
-      'TOTAL: ${total.toStringAsFixed(2)}',
-      styles: PosStyles(bold: true, height: PosTextSize.size2),
-    );
-
-    bytes += generator.text('Payment: $paymentMethod');
-    bytes += generator.hr();
-
-    if (qrData != null) {
-      bytes += generator.qrcode(qrData);
-    }
-
-    if (barcodeData != null && barcodeData.isNotEmpty) {
-      bytes += generator.barcode(
-        Barcode.code128(utf8.encode(barcodeData)),
-        width: 2,
-        height: 80,
-        align: PosAlign.center,
+    if (session.companyAddress != null) {
+      bytes += generator.text(
+        session.companyAddress!,
+        styles: const PosStyles(align: PosAlign.center),
       );
     }
 
-    bytes += generator.feed(2);
+    if (session.companyContactOne != null) {
+      bytes += generator.text(
+        session.companyContactOne!,
+        styles: const PosStyles(align: PosAlign.center),
+      );
+    }
+
+    if (session.companyEmail != null) {
+      bytes += generator.text(
+        session.companyEmail!,
+        styles: const PosStyles(align: PosAlign.center),
+      );
+    }
+
+    bytes += generator.hr();
+
+    // ── Receipt type ───────────────────────────────────────
+    bytes += generator.text(
+      isDuplicate ? 'DUPLICATE RECEIPT' : 'RECEIPT',
+      styles: const PosStyles(
+          align: PosAlign.center, bold: true),
+    );
+
+    bytes += generator.hr();
+
+    // ── Meta ───────────────────────────────────────────────
+    bytes += generator.row([
+      PosColumn(
+          text: 'Order:',
+          width: 4,
+          styles: const PosStyles(bold: true)),
+      PosColumn(text: order.orderNumber, width: 8),
+    ]);
+
+    bytes += generator.row([
+      PosColumn(
+          text: 'Date:',
+          width: 4,
+          styles: const PosStyles(bold: true)),
+      PosColumn(
+          text: DateFormat('dd/MM/yy HH:mm')
+              .format(transaction.timestamp),
+          width: 8),
+    ]);
+
+    bytes += generator.row([
+      PosColumn(
+          text: 'Teller:',
+          width: 4,
+          styles: const PosStyles(bold: true)),
+      PosColumn(
+          text: session.userName ?? '-', width: 8),
+    ]);
+
+    bytes += generator.row([
+      PosColumn(
+          text: 'Method:',
+          width: 4,
+          styles: const PosStyles(bold: true)),
+      PosColumn(
+          text: _paymentLabel(transaction.paymentMethod),
+          width: 8),
+    ]);
+
+    bytes += generator.hr();
+
+    // ── Items header ───────────────────────────────────────
+    bytes += generator.row([
+      PosColumn(
+          text: 'Item',
+          width: 6,
+          styles: const PosStyles(
+              bold: true, underline: true)),
+      PosColumn(
+          text: 'Qty',
+          width: 2,
+          styles: const PosStyles(
+              bold: true, underline: true)),
+      PosColumn(
+          text: 'Total',
+          width: 4,
+          styles: const PosStyles(
+              bold: true,
+              underline: true,
+              align: PosAlign.right)),
+    ]);
+
+    // ── Items ──────────────────────────────────────────────
+    for (final item in order.items) {
+      final name = item.productName.length > 14
+          ? '${item.productName.substring(0, 14)}..'
+          : item.productName;
+
+      bytes += generator.row([
+        PosColumn(text: name, width: 6),
+        PosColumn(text: 'x${item.quantity}', width: 2),
+        PosColumn(
+            text:
+            '${ConstantUtil.currencySymbol} ${item.totalPrice.toStringAsFixed(2)}',
+            width: 4,
+            styles: const PosStyles(
+                align: PosAlign.right)),
+      ]);
+
+      // unit price hint
+      bytes += generator.text(
+        '  @ ${ConstantUtil.currencySymbol} ${item.unitPrice.toStringAsFixed(2)} each',
+        styles: const PosStyles(
+            fontType: PosFontType.fontB,
+            align: PosAlign.left),
+      );
+    }
+
+    bytes += generator.hr();
+
+    // ── Totals ─────────────────────────────────────────────
+    bytes += generator.row([
+      PosColumn(text: 'Subtotal:', width: 7),
+      PosColumn(
+          text:
+          '${ConstantUtil.currencySymbol}${order.subtotal.toStringAsFixed(2)}',
+          width: 5,
+          styles: const PosStyles(
+              align: PosAlign.right)),
+    ]);
+
+    bytes += generator.row([
+      PosColumn(text: 'Tax:', width: 7),
+      PosColumn(
+          text:
+          '${ConstantUtil.currencySymbol} ${order.taxAmount.toStringAsFixed(2)}',
+          width: 5,
+          styles: const PosStyles(
+              align: PosAlign.right)),
+    ]);
+
+    if (order.discountAmount > 0) {
+      bytes += generator.row([
+        PosColumn(text: 'Discount:', width: 7),
+        PosColumn(
+            text:
+            '-${ConstantUtil.currencySymbol} ${order.discountAmount.toStringAsFixed(2)}',
+            width: 5,
+            styles: const PosStyles(
+                align: PosAlign.right)),
+      ]);
+    }
+
+    bytes += generator.hr(linesAfter: 1);
+
+    bytes += generator.row([
+      PosColumn(
+          text: 'TOTAL:',
+          width: 6,
+          styles: const PosStyles(
+              bold: true, height: PosTextSize.size2)),
+      PosColumn(
+          text:
+          '${ConstantUtil.currencySymbol} ${order.totalAmount.toStringAsFixed(2)}',
+          width: 6,
+          styles: const PosStyles(
+              bold: true,
+              height: PosTextSize.size2,
+              align: PosAlign.right)),
+    ]);
+
+    bytes += generator.feed(1);
+
+    bytes += generator.row([
+      PosColumn(text: 'Paid:', width: 7),
+      PosColumn(
+          text:
+          '${ConstantUtil.currencySymbol} ${transaction.amountPaid.toStringAsFixed(2)}',
+          width: 5,
+          styles: const PosStyles(
+              align: PosAlign.right)),
+    ]);
+
+    bytes += generator.row([
+      PosColumn(text: 'Change:', width: 7),
+      PosColumn(
+          text:
+          '${ConstantUtil.currencySymbol} ${transaction.changeGiven.toStringAsFixed(2)}',
+          width: 5,
+          styles: const PosStyles(
+              align: PosAlign.right)),
+    ]);
+
+    bytes += generator.hr();
+
+    // ── QR code (order number) ─────────────────────────────
+    bytes += generator.qrcode(
+      order.orderNumber,
+      size: QRSize.Size4,
+      cor: QRCorrection.M,
+    );
+
+    // ── Barcode (transaction number) ───────────────────────
+    try {
+      bytes += generator.barcode(
+        Barcode.code128(
+            utf8.encode(transaction.transactionNumber)),
+        width: 2,
+        height: 60,
+        align: PosAlign.center,
+      );
+    } catch (_) {}
+
+    bytes += generator.hr();
+
+    // ── Footer ─────────────────────────────────────────────
+    bytes += generator.text(
+      'Thank You For Your Purchase!',
+      styles: const PosStyles(align: PosAlign.center),
+    );
+
+    if (session.companySlogan != null) {
+      bytes += generator.text(
+        session.companySlogan!,
+        styles: const PosStyles(align: PosAlign.center),
+      );
+    }
+
+    bytes += generator.feed(3);
     bytes += generator.cut();
 
     return bytes;
   }
 
-  // ──────────────────────────────
-  // 📡 BUILD BLUETOOTH RECEIPT
+  // ─────────────────────────────────────────────────────────
+  // ── BUILD BLUETOOTH RECEIPT ───────────────────────────────
+  // ─────────────────────────────────────────────────────────
   List<LineText> _buildBluetoothReceipt({
-    required String storeName,
-    required String address,
-    required List<Map<String, dynamic>> items,
-    required double total,
-    required double vat,
-    required String paymentMethod,
-    String? qrData,
+    required SaleOrder order,
+    required PosTransaction transaction,
+    bool isDuplicate = false,
   }) {
-    List<LineText> list = [];
+    final list = <LineText>[];
+    final session = SessionManager();
 
+    // ── Header ─────────────────────────────────────────────
     list.add(LineText(
       type: LineText.TYPE_TEXT,
-      content: storeName,
+      content: session.companyName ?? 'CounterPro',
       align: LineText.ALIGN_CENTER,
       weight: 2,
       size: 2,
+      linefeed: 1,
     ));
+
+    if (session.companyAddress != null) {
+      list.add(LineText(
+        type: LineText.TYPE_TEXT,
+        content: session.companyAddress!,
+        align: LineText.ALIGN_CENTER,
+        linefeed: 1,
+      ));
+    }
+
+    if (session.companyContactOne != null) {
+      list.add(LineText(
+        type: LineText.TYPE_TEXT,
+        content: session.companyContactOne!,
+        align: LineText.ALIGN_CENTER,
+        linefeed: 1,
+      ));
+    }
+
+    list.add(_btDivider());
 
     list.add(LineText(
       type: LineText.TYPE_TEXT,
-      content: address,
+      content:
+      isDuplicate ? 'DUPLICATE RECEIPT' : 'RECEIPT',
       align: LineText.ALIGN_CENTER,
+      weight: 1,
+      linefeed: 1,
     ));
 
+    list.add(_btDivider());
+
+    // ── Meta ───────────────────────────────────────────────
+    list.add(_btRow('Order:', order.orderNumber));
+    list.add(_btRow(
+      'Date:',
+      DateFormat('dd/MM/yy HH:mm')
+          .format(transaction.timestamp),
+    ));
+    list.add(
+        _btRow('Teller:', session.userName ?? '-'));
+    list.add(_btRow(
+      'Method:',
+      _paymentLabel(transaction.paymentMethod),
+    ));
+
+    list.add(_btDivider());
+
+    // ── Items header ───────────────────────────────────────
     list.add(LineText(
       type: LineText.TYPE_TEXT,
-      content: '-----------------------------',
+      content: 'Item            Qty   Total',
+      weight: 1,
+      linefeed: 1,
     ));
 
-    for (var item in items) {
+    list.add(_btDottedLine());
+
+    // ── Items ──────────────────────────────────────────────
+    for (final item in order.items) {
+      final name = item.productName.length > 14
+          ? '${item.productName.substring(0, 14)}..'
+          : item.productName.padRight(16);
+      final qty = 'x${item.quantity}'.padRight(6);
+      final total =
+          '${ConstantUtil.currencySymbol} ${item.totalPrice.toStringAsFixed(2)}';
+
+      list.add(LineText(
+        type: LineText.TYPE_TEXT,
+        content: '$name$qty$total',
+        linefeed: 1,
+      ));
+
       list.add(LineText(
         type: LineText.TYPE_TEXT,
         content:
-        "${item['name']}  ${item['qty']} x ${item['price'].toStringAsFixed(2)}",
+        '  @ ${ConstantUtil.currencySymbol} ${item.unitPrice.toStringAsFixed(2)} each',
+        linefeed: 1,
       ));
     }
 
-    list.add(LineText(
-      type: LineText.TYPE_TEXT,
-      content: '-----------------------------',
+    list.add(_btDivider());
+
+    // ── Totals ─────────────────────────────────────────────
+    list.add(_btRow(
+      'Subtotal:',
+      '${ConstantUtil.currencySymbol} ${order.subtotal.toStringAsFixed(2)}',
     ));
+    list.add(_btRow(
+      'Tax:',
+      '${ConstantUtil.currencySymbol} ${order.taxAmount.toStringAsFixed(2)}',
+    ));
+
+    if (order.discountAmount > 0) {
+      list.add(_btRow(
+        'Discount:',
+        '-${ConstantUtil.currencySymbol} ${order.discountAmount.toStringAsFixed(2)}',
+      ));
+    }
+
+    list.add(_btDivider());
 
     list.add(LineText(
       type: LineText.TYPE_TEXT,
-      content: 'VAT: ${vat.toStringAsFixed(2)}',
-    ));
-
-    list.add(LineText(
-      type: LineText.TYPE_TEXT,
-      content: 'TOTAL: ${total.toStringAsFixed(2)}',
+      content:
+      'TOTAL:  ${ConstantUtil.currencySymbol} ${order.totalAmount.toStringAsFixed(2)}',
       weight: 2,
       size: 2,
+      align: LineText.ALIGN_CENTER,
+      linefeed: 1,
     ));
 
+    list.add(_btRow(
+      'Paid:',
+      '${ConstantUtil.currencySymbol} ${transaction.amountPaid.toStringAsFixed(2)}',
+    ));
+    list.add(_btRow(
+      'Change:',
+      '${ConstantUtil.currencySymbol} ${transaction.changeGiven.toStringAsFixed(2)}',
+    ));
+
+    list.add(_btDivider());
+
+    // ── QR code ────────────────────────────────────────────
+    list.add(LineText(
+      type: LineText.TYPE_QRCODE,
+      content: order.orderNumber,
+      align: LineText.ALIGN_CENTER,
+      size: 5,
+      linefeed: 1,
+    ));
+
+    list.add(_btDivider());
+
+    // ── Footer ─────────────────────────────────────────────
     list.add(LineText(
       type: LineText.TYPE_TEXT,
-      content: 'Payment: $paymentMethod',
+      content: 'Thank you for your purchase!',
+      align: LineText.ALIGN_CENTER,
+      linefeed: 1,
     ));
 
-    if (qrData != null) {
+    if (session.companySlogan != null) {
       list.add(LineText(
-        type: LineText.TYPE_QRCODE,
-        content: qrData,
+        type: LineText.TYPE_TEXT,
+        content: session.companySlogan!,
         align: LineText.ALIGN_CENTER,
-        size: 6,
+        linefeed: 1,
       ));
     }
+
+    list.add(LineText(
+        type: LineText.TYPE_TEXT,
+        content: '',
+        linefeed: 1));
+    list.add(LineText(
+        type: LineText.TYPE_TEXT,
+        content: '',
+        linefeed: 1));
 
     return list;
   }
 
-  // ──────────────────────────────
-  // 🖨️ PRINT RECEIPT
-  Future<void> printReceipt({
-    required String storeName,
-    required String address,
-    required List<Map<String, dynamic>> items,
-    required double total,
-    required double vat,
-    required String paymentMethod,
-    String? qrData,
-    String? barcodeData,
+  // ─────────────────────────────────────────────────────────
+  // ── REPORT RECEIPT ────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────
+  Future<List<int>> _buildUsbReport({
+    required String title,
+    required DateTime startDate,
+    required DateTime endDate,
+    required double totalRevenue,
+    required double totalCost,
+    required double grossProfit,
+    required int totalOrders,
+    required int totalItems,
   }) async {
+    final profile = await CapabilityProfile.load();
+    final generator = Generator(PaperSize.mm58, profile);
+    final session = SessionManager();
+    final fmt = DateFormat('dd/MM/yyyy');
+    List<int> bytes = [];
+
+    bytes += generator.text(
+      session.companyName ?? 'CounterPro',
+      styles: const PosStyles(
+          align: PosAlign.center, bold: true),
+    );
+
+    bytes += generator.text(
+      'SALES REPORT',
+      styles: const PosStyles(
+          align: PosAlign.center,
+          bold: true,
+          height: PosTextSize.size2),
+    );
+
+    bytes += generator.hr();
+
+    bytes += generator.row([
+      PosColumn(text: 'From:', width: 5),
+      PosColumn(text: fmt.format(startDate), width: 7),
+    ]);
+    bytes += generator.row([
+      PosColumn(text: 'To:', width: 5),
+      PosColumn(text: fmt.format(endDate), width: 7),
+    ]);
+    bytes += generator.row([
+      PosColumn(text: 'By:', width: 5),
+      PosColumn(
+          text: session.userName ?? '-', width: 7),
+    ]);
+    bytes += generator.row([
+      PosColumn(text: 'Printed:', width: 5),
+      PosColumn(
+          text: DateFormat('dd/MM/yy HH:mm')
+              .format(DateTime.now()),
+          width: 7),
+    ]);
+
+    bytes += generator.hr();
+    bytes += generator.text('SUMMARY',
+        styles: const PosStyles(
+            align: PosAlign.center, bold: true));
+    bytes += generator.hr();
+
+    bytes += generator.row([
+      PosColumn(text: 'Orders:', width: 7),
+      PosColumn(
+          text: totalOrders.toString(),
+          width: 5,
+          styles:
+          const PosStyles(align: PosAlign.right)),
+    ]);
+    bytes += generator.row([
+      PosColumn(text: 'Items Sold:', width: 7),
+      PosColumn(
+          text: totalItems.toString(),
+          width: 5,
+          styles:
+          const PosStyles(align: PosAlign.right)),
+    ]);
+    bytes += generator.row([
+      PosColumn(text: 'Revenue:', width: 7),
+      PosColumn(
+          text:
+          '\$${totalRevenue.toStringAsFixed(2)}',
+          width: 5,
+          styles:
+          const PosStyles(align: PosAlign.right)),
+    ]);
+    bytes += generator.row([
+      PosColumn(text: 'Cost:', width: 7),
+      PosColumn(
+          text: '${ConstantUtil.currencySymbol} ${totalCost.toStringAsFixed(2)}',
+          width: 5,
+          styles:
+          const PosStyles(align: PosAlign.right)),
+    ]);
+    bytes += generator.row([
+      PosColumn(
+          text: 'Profit:',
+          width: 7,
+          styles: const PosStyles(bold: true)),
+      PosColumn(
+          text:
+          '${ConstantUtil.currencySymbol} ${grossProfit.toStringAsFixed(2)}',
+          width: 5,
+          styles: const PosStyles(
+              bold: true, align: PosAlign.right)),
+    ]);
+
+    final margin = totalRevenue > 0
+        ? ((grossProfit / totalRevenue) * 100)
+        .toStringAsFixed(1)
+        : '0.0';
+
+    bytes += generator.row([
+      PosColumn(text: 'Margin:', width: 7),
+      PosColumn(
+          text: '$margin%',
+          width: 5,
+          styles:
+          const PosStyles(align: PosAlign.right)),
+    ]);
+
+    bytes += generator.hr();
+    bytes += generator.text('END OF REPORT',
+        styles:
+        const PosStyles(align: PosAlign.center));
+
+    bytes += generator.feed(3);
+    bytes += generator.cut();
+
+    return bytes;
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // ── PRINT RECEIPT (main entry point) ─────────────────────
+  // ─────────────────────────────────────────────────────────
+  Future<void> printReceipt({
+    required SaleOrder order,
+    required PosTransaction transaction,
+    bool isDuplicate = false,
+  }) async {
+    if (!isConnected) {
+      throw Exception(
+          'No printer connected. Please connect a printer first.');
+    }
+
     if (_connectionType == 'usb') {
       final bytes = await _buildUsbReceipt(
-        storeName: storeName,
-        address: address,
-        items: items,
-        total: total,
-        vat: vat,
-        paymentMethod: paymentMethod,
-        qrData: qrData,
-        barcodeData: barcodeData,
+        order: order,
+        transaction: transaction,
+        isDuplicate: isDuplicate,
       );
-
       await _usbPort?.write(Uint8List.fromList(bytes));
     } else if (_connectionType == 'bluetooth' &&
         _bluetoothConnected) {
       final data = _buildBluetoothReceipt(
-        storeName: storeName,
-        address: address,
-        items: items,
-        total: total,
-        vat: vat,
-        paymentMethod: paymentMethod,
-        qrData: qrData,
+        order: order,
+        transaction: transaction,
+        isDuplicate: isDuplicate,
       );
-
       await _bluetooth.printReceipt({}, data);
-    } else {
-      print('❌ No printer connected');
     }
   }
 
-  // ──────────────────────────────
-  // ⚡ AUTO PRINT
-  Future<void> autoPrintCheckout({
-    required List<Map<String, dynamic>> items,
-    required double total,
+  // ─────────────────────────────────────────────────────────
+  // ── PRINT REPORT (main entry point) ──────────────────────
+  // ─────────────────────────────────────────────────────────
+  Future<void> printReport({
+    required String title,
+    required DateTime startDate,
+    required DateTime endDate,
+    required double totalRevenue,
+    required double totalCost,
+    required double grossProfit,
+    required int totalOrders,
+    required int totalItems,
   }) async {
-    final vat = total * 0.15;
+    if (!isConnected) {
+      throw Exception(
+          'No Printer Connected. Please Connect A Printer First.');
+    }
 
-    await printReceipt(
-      storeName: 'CHICKEN SLICE',
-      address: 'Accra, Ghana',
-      items: items,
-      total: total,
-      vat: vat,
-      paymentMethod: 'CASH',
-      qrData: 'https://chickenslice.com',
-      barcodeData: '123456789',
+    if (_connectionType == 'usb') {
+      final bytes = await _buildUsbReport(
+        title: title,
+        startDate: startDate,
+        endDate: endDate,
+        totalRevenue: totalRevenue,
+        totalCost: totalCost,
+        grossProfit: grossProfit,
+        totalOrders: totalOrders,
+        totalItems: totalItems,
+      );
+      await _usbPort?.write(Uint8List.fromList(bytes));
+    } else if (_connectionType == 'bluetooth' &&
+        _bluetoothConnected) {
+      // bluetooth report
+      final list = <LineText>[];
+      final session = SessionManager();
+      final fmt = DateFormat('dd/MM/yyyy');
+
+      list.add(LineText(
+        type: LineText.TYPE_TEXT,
+        content: session.companyName ?? 'CounterPro',
+        align: LineText.ALIGN_CENTER,
+        weight: 2,
+        linefeed: 1,
+      ));
+      list.add(LineText(
+        type: LineText.TYPE_TEXT,
+        content: 'SALES REPORT',
+        align: LineText.ALIGN_CENTER,
+        weight: 1,
+        linefeed: 1,
+      ));
+      list.add(_btDivider());
+      list.add(_btRow('From:', fmt.format(startDate)));
+      list.add(_btRow('To:', fmt.format(endDate)));
+      list.add(_btRow(
+          'Printed:',
+          DateFormat('dd/MM/yy HH:mm')
+              .format(DateTime.now())));
+      list.add(_btDivider());
+      list.add(_btRow('Orders:', totalOrders.toString()));
+      list.add(_btRow('Revenue:',
+          '${ConstantUtil.currencySymbol} ${totalRevenue.toStringAsFixed(2)}'));
+      list.add(_btRow(
+          'Cost:', '${ConstantUtil.currencySymbol} ${totalCost.toStringAsFixed(2)}'));
+      list.add(_btRow('Profit:',
+          '${ConstantUtil.currencySymbol} ${grossProfit.toStringAsFixed(2)}'));
+      list.add(_btDivider());
+      list.add(LineText(
+        type: LineText.TYPE_TEXT,
+        content: 'END OF REPORT',
+        align: LineText.ALIGN_CENTER,
+        linefeed: 1,
+      ));
+
+      await _bluetooth.printReceipt({}, list);
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // ── HELPERS ───────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────
+  String _paymentLabel(PaymentMethod method) {
+    switch (method) {
+      case PaymentMethod.cash:
+        return 'Cash';
+      case PaymentMethod.card:
+        return 'Card';
+      case PaymentMethod.mobileMoney:
+        return 'Mobile Money';
+      case PaymentMethod.split:
+        return 'Split';
+    }
+  }
+
+  LineText _btDivider() => LineText(
+    type: LineText.TYPE_TEXT,
+    content: '--------------------------------',
+    linefeed: 1,
+  );
+
+  LineText _btDottedLine() => LineText(
+    type: LineText.TYPE_TEXT,
+    content: '- - - - - - - - - - - - - - - -',
+    linefeed: 1,
+  );
+
+  LineText _btRow(String label, String value) {
+    const width = 32;
+    final space = width - label.length - value.length;
+    final content = space > 0
+        ? '$label${' ' * space}$value'
+        : '$label $value';
+    return LineText(
+      type: LineText.TYPE_TEXT,
+      content: content,
+      linefeed: 1,
     );
   }
 }
-
-// //-------------------------Bluetooth auto print --------------
-// import 'package:shared_preferences/shared_preferences.dart';
-//
-// //Save device after connection
-// Future<void> savePrinter(BluetoothDevice device) async {
-//   final prefs = await SharedPreferences.getInstance();
-//   await prefs.setString('printer_address', device.address ?? '');
-// }
-// //Load & auto reconnect
-// Future<void> autoReconnectPrinter() async {
-//   final prefs = await SharedPreferences.getInstance();
-//   final address = prefs.getString('printer_address');
-//
-//   if (address == null) return;
-//
-//   BluetoothPrint.instance.scanResults.listen((devices) async {
-//     for (var d in devices) {
-//       if (d.address == address) {
-//         await PrinterManager().connectBluetooth(d);
-//         print("✅ Auto reconnected printer");
-//       }
-//     }
-//   });
-//
-//   BluetoothPrint.instance.startScan(timeout: Duration(seconds: 3));
-// }
-// // ✅ AUTO PRINT (optional) after payment
-// if (PosSettings.autoPrint) {
-// await PrinterManager().autoPrintCheckout(
-// items: items,
-// total: total,
-// );
-// }
-// //Print Button
-// ElevatedButton(
-// onPressed: () async {
-// await PrinterManager().autoPrintCheckout(
-// items: cartItems.map((e) => e.toMap()).toList(),
-// total: total,
-// );
-// },
-// child: Text("Print Receipt"),
-// )
-// Column(
-// children: [
-// // 🔘 Toggle
-// SwitchListTile(
-// title: Text("Auto Print"),
-// value: PosSettings.autoPrint,
-// onChanged: (val) {
-// PosSettings.autoPrint = val;
-// },
-// ),
-//
-// // 🔍 Scan printer
-// ElevatedButton(
-// onPressed: scanDevices,
-// child: Text("Scan Printer"),
-// ),
-//
-// // 🖨 Print manually
-// ElevatedButton(
-// onPressed: printTest,
-// child: Text("Print Test"),
-// ),
-//
-// // 💳 Checkout
-// ElevatedButton(
-// onPressed: () => checkout(cartItems),
-// child: Text("Checkout"),
-// ),
-// ],
-// )

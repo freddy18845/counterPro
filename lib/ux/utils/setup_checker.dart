@@ -17,20 +17,6 @@ class SetupChecker {
         .filter()
         .roleEqualTo(UserRole.admin)
         .findFirst();
-    // if (company != null) {
-    //   DateTime? companySubscription = await OnlineChecker()
-    //       .getCompanySubscriptionEndDate(company.companyId);
-    //   if (companySubscription == null) {
-    //     return true;
-    //   }
-    //   bool status = await checkAndHandleSubscriptionStatusFromWeb(
-    //     companySubscription,
-    //     context,
-    //   );
-    //   print('status $status');
-    //   return status;
-    // }
-
     return company != null && adminUser != null;
   }
 
