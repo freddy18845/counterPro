@@ -16,6 +16,8 @@ class AppStrings {
   static const String updatingData = "Update Data";
   static const String email = "Email:";
   static const String selectAPaymentOption = "Select A Payment Option";
+  static const String syncingToServer = "Syncing To Server....";
+  static const String pleaseOnlyCompaniesCanHaveAPIAccessandAPIKey = "Sorry ,Only Companies  With API Access And API Key Can Sync Data The Server";
   static const String address = "Address:";
   static const String company = "Company:";
   static const String phone = "Phone: ";

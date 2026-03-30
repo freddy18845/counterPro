@@ -42,38 +42,70 @@ const CompanySchema = CollectionSchema(
       name: r'createdAt',
       type: IsarType.dateTime,
     ),
-    r'email': PropertySchema(
+    r'daysUntilExpiry': PropertySchema(
       id: 5,
+      name: r'daysUntilExpiry',
+      type: IsarType.long,
+    ),
+    r'email': PropertySchema(
+      id: 6,
       name: r'email',
       type: IsarType.string,
     ),
+    r'isExpiringSoon': PropertySchema(
+      id: 7,
+      name: r'isExpiringSoon',
+      type: IsarType.bool,
+    ),
+    r'isSubscriptionActive': PropertySchema(
+      id: 8,
+      name: r'isSubscriptionActive',
+      type: IsarType.bool,
+    ),
+    r'isSubscriptionExpired': PropertySchema(
+      id: 9,
+      name: r'isSubscriptionExpired',
+      type: IsarType.bool,
+    ),
     r'logoPath': PropertySchema(
-      id: 6,
+      id: 10,
       name: r'logoPath',
       type: IsarType.string,
     ),
     r'name': PropertySchema(
-      id: 7,
+      id: 11,
       name: r'name',
       type: IsarType.string,
     ),
     r'slogan': PropertySchema(
-      id: 8,
+      id: 12,
       name: r'slogan',
       type: IsarType.string,
     ),
     r'subscriptionEndDate': PropertySchema(
-      id: 9,
+      id: 13,
       name: r'subscriptionEndDate',
       type: IsarType.dateTime,
     ),
+    r'subscriptionPlan': PropertySchema(
+      id: 14,
+      name: r'subscriptionPlan',
+      type: IsarType.string,
+      enumMap: _CompanysubscriptionPlanEnumValueMap,
+    ),
     r'subscriptionStartDate': PropertySchema(
-      id: 10,
+      id: 15,
       name: r'subscriptionStartDate',
       type: IsarType.dateTime,
     ),
+    r'subscriptionStatus': PropertySchema(
+      id: 16,
+      name: r'subscriptionStatus',
+      type: IsarType.string,
+      enumMap: _CompanysubscriptionStatusEnumValueMap,
+    ),
     r'updatedAt': PropertySchema(
-      id: 11,
+      id: 17,
       name: r'updatedAt',
       type: IsarType.dateTime,
     )
@@ -99,7 +131,12 @@ int _companyEstimateSize(
 ) {
   var bytesCount = offsets.last;
   bytesCount += 3 + object.address.length * 3;
-  bytesCount += 3 + object.companyId.length * 3;
+  {
+    final value = object.companyId;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   bytesCount += 3 + object.contactOne.length * 3;
   bytesCount += 3 + object.contactTwo.length * 3;
   bytesCount += 3 + object.email.length * 3;
@@ -116,6 +153,8 @@ int _companyEstimateSize(
       bytesCount += 3 + value.length * 3;
     }
   }
+  bytesCount += 3 + object.subscriptionPlan.name.length * 3;
+  bytesCount += 3 + object.subscriptionStatus.name.length * 3;
   return bytesCount;
 }
 
@@ -130,13 +169,19 @@ void _companySerialize(
   writer.writeString(offsets[2], object.contactOne);
   writer.writeString(offsets[3], object.contactTwo);
   writer.writeDateTime(offsets[4], object.createdAt);
-  writer.writeString(offsets[5], object.email);
-  writer.writeString(offsets[6], object.logoPath);
-  writer.writeString(offsets[7], object.name);
-  writer.writeString(offsets[8], object.slogan);
-  writer.writeDateTime(offsets[9], object.subscriptionEndDate);
-  writer.writeDateTime(offsets[10], object.subscriptionStartDate);
-  writer.writeDateTime(offsets[11], object.updatedAt);
+  writer.writeLong(offsets[5], object.daysUntilExpiry);
+  writer.writeString(offsets[6], object.email);
+  writer.writeBool(offsets[7], object.isExpiringSoon);
+  writer.writeBool(offsets[8], object.isSubscriptionActive);
+  writer.writeBool(offsets[9], object.isSubscriptionExpired);
+  writer.writeString(offsets[10], object.logoPath);
+  writer.writeString(offsets[11], object.name);
+  writer.writeString(offsets[12], object.slogan);
+  writer.writeDateTime(offsets[13], object.subscriptionEndDate);
+  writer.writeString(offsets[14], object.subscriptionPlan.name);
+  writer.writeDateTime(offsets[15], object.subscriptionStartDate);
+  writer.writeString(offsets[16], object.subscriptionStatus.name);
+  writer.writeDateTime(offsets[17], object.updatedAt);
 }
 
 Company _companyDeserialize(
@@ -147,18 +192,24 @@ Company _companyDeserialize(
 ) {
   final object = Company();
   object.address = reader.readString(offsets[0]);
-  object.companyId = reader.readString(offsets[1]);
+  object.companyId = reader.readStringOrNull(offsets[1]);
   object.contactOne = reader.readString(offsets[2]);
   object.contactTwo = reader.readString(offsets[3]);
   object.createdAt = reader.readDateTime(offsets[4]);
-  object.email = reader.readString(offsets[5]);
+  object.email = reader.readString(offsets[6]);
   object.id = id;
-  object.logoPath = reader.readStringOrNull(offsets[6]);
-  object.name = reader.readString(offsets[7]);
-  object.slogan = reader.readStringOrNull(offsets[8]);
-  object.subscriptionEndDate = reader.readDateTimeOrNull(offsets[9]);
-  object.subscriptionStartDate = reader.readDateTime(offsets[10]);
-  object.updatedAt = reader.readDateTime(offsets[11]);
+  object.logoPath = reader.readStringOrNull(offsets[10]);
+  object.name = reader.readString(offsets[11]);
+  object.slogan = reader.readStringOrNull(offsets[12]);
+  object.subscriptionEndDate = reader.readDateTimeOrNull(offsets[13]);
+  object.subscriptionPlan = _CompanysubscriptionPlanValueEnumMap[
+          reader.readStringOrNull(offsets[14])] ??
+      SubscriptionPlan.basic;
+  object.subscriptionStartDate = reader.readDateTimeOrNull(offsets[15]);
+  object.subscriptionStatus = _CompanysubscriptionStatusValueEnumMap[
+          reader.readStringOrNull(offsets[16])] ??
+      SubscriptionStatus.active;
+  object.updatedAt = reader.readDateTime(offsets[17]);
   return object;
 }
 
@@ -172,7 +223,7 @@ P _companyDeserializeProp<P>(
     case 0:
       return (reader.readString(offset)) as P;
     case 1:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 2:
       return (reader.readString(offset)) as P;
     case 3:
@@ -180,23 +231,62 @@ P _companyDeserializeProp<P>(
     case 4:
       return (reader.readDateTime(offset)) as P;
     case 5:
-      return (reader.readString(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 6:
-      return (reader.readStringOrNull(offset)) as P;
-    case 7:
       return (reader.readString(offset)) as P;
+    case 7:
+      return (reader.readBool(offset)) as P;
     case 8:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 9:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 10:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 11:
+      return (reader.readString(offset)) as P;
+    case 12:
+      return (reader.readStringOrNull(offset)) as P;
+    case 13:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 14:
+      return (_CompanysubscriptionPlanValueEnumMap[
+              reader.readStringOrNull(offset)] ??
+          SubscriptionPlan.basic) as P;
+    case 15:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 16:
+      return (_CompanysubscriptionStatusValueEnumMap[
+              reader.readStringOrNull(offset)] ??
+          SubscriptionStatus.active) as P;
+    case 17:
       return (reader.readDateTime(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
 }
+
+const _CompanysubscriptionPlanEnumValueMap = {
+  r'basic': r'basic',
+  r'pro': r'pro',
+  r'enterprise': r'enterprise',
+};
+const _CompanysubscriptionPlanValueEnumMap = {
+  r'basic': SubscriptionPlan.basic,
+  r'pro': SubscriptionPlan.pro,
+  r'enterprise': SubscriptionPlan.enterprise,
+};
+const _CompanysubscriptionStatusEnumValueMap = {
+  r'active': r'active',
+  r'expired': r'expired',
+  r'cancelled': r'cancelled',
+  r'trial': r'trial',
+};
+const _CompanysubscriptionStatusValueEnumMap = {
+  r'active': SubscriptionStatus.active,
+  r'expired': SubscriptionStatus.expired,
+  r'cancelled': SubscriptionStatus.cancelled,
+  r'trial': SubscriptionStatus.trial,
+};
 
 Id _companyGetId(Company object) {
   return object.id;
@@ -417,8 +507,24 @@ extension CompanyQueryFilter
     });
   }
 
+  QueryBuilder<Company, Company, QAfterFilterCondition> companyIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'companyId',
+      ));
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterFilterCondition> companyIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'companyId',
+      ));
+    });
+  }
+
   QueryBuilder<Company, Company, QAfterFilterCondition> companyIdEqualTo(
-    String value, {
+    String? value, {
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -431,7 +537,7 @@ extension CompanyQueryFilter
   }
 
   QueryBuilder<Company, Company, QAfterFilterCondition> companyIdGreaterThan(
-    String value, {
+    String? value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
@@ -446,7 +552,7 @@ extension CompanyQueryFilter
   }
 
   QueryBuilder<Company, Company, QAfterFilterCondition> companyIdLessThan(
-    String value, {
+    String? value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
@@ -461,8 +567,8 @@ extension CompanyQueryFilter
   }
 
   QueryBuilder<Company, Company, QAfterFilterCondition> companyIdBetween(
-    String lower,
-    String upper, {
+    String? lower,
+    String? upper, {
     bool includeLower = true,
     bool includeUpper = true,
     bool caseSensitive = true,
@@ -860,6 +966,60 @@ extension CompanyQueryFilter
     });
   }
 
+  QueryBuilder<Company, Company, QAfterFilterCondition> daysUntilExpiryEqualTo(
+      int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'daysUntilExpiry',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterFilterCondition>
+      daysUntilExpiryGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'daysUntilExpiry',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterFilterCondition> daysUntilExpiryLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'daysUntilExpiry',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterFilterCondition> daysUntilExpiryBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'daysUntilExpiry',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
   QueryBuilder<Company, Company, QAfterFilterCondition> emailEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -1038,6 +1198,36 @@ extension CompanyQueryFilter
         includeLower: includeLower,
         upper: upper,
         includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterFilterCondition> isExpiringSoonEqualTo(
+      bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isExpiringSoon',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterFilterCondition>
+      isSubscriptionActiveEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isSubscriptionActive',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterFilterCondition>
+      isSubscriptionExpiredEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isSubscriptionExpired',
+        value: value,
       ));
     });
   }
@@ -1538,8 +1728,161 @@ extension CompanyQueryFilter
     });
   }
 
+  QueryBuilder<Company, Company, QAfterFilterCondition> subscriptionPlanEqualTo(
+    SubscriptionPlan value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'subscriptionPlan',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
   QueryBuilder<Company, Company, QAfterFilterCondition>
-      subscriptionStartDateEqualTo(DateTime value) {
+      subscriptionPlanGreaterThan(
+    SubscriptionPlan value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'subscriptionPlan',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterFilterCondition>
+      subscriptionPlanLessThan(
+    SubscriptionPlan value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'subscriptionPlan',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterFilterCondition> subscriptionPlanBetween(
+    SubscriptionPlan lower,
+    SubscriptionPlan upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'subscriptionPlan',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterFilterCondition>
+      subscriptionPlanStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'subscriptionPlan',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterFilterCondition>
+      subscriptionPlanEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'subscriptionPlan',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterFilterCondition>
+      subscriptionPlanContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'subscriptionPlan',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterFilterCondition> subscriptionPlanMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'subscriptionPlan',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterFilterCondition>
+      subscriptionPlanIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'subscriptionPlan',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterFilterCondition>
+      subscriptionPlanIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'subscriptionPlan',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterFilterCondition>
+      subscriptionStartDateIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'subscriptionStartDate',
+      ));
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterFilterCondition>
+      subscriptionStartDateIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'subscriptionStartDate',
+      ));
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterFilterCondition>
+      subscriptionStartDateEqualTo(DateTime? value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'subscriptionStartDate',
@@ -1550,7 +1893,7 @@ extension CompanyQueryFilter
 
   QueryBuilder<Company, Company, QAfterFilterCondition>
       subscriptionStartDateGreaterThan(
-    DateTime value, {
+    DateTime? value, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -1564,7 +1907,7 @@ extension CompanyQueryFilter
 
   QueryBuilder<Company, Company, QAfterFilterCondition>
       subscriptionStartDateLessThan(
-    DateTime value, {
+    DateTime? value, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -1578,8 +1921,8 @@ extension CompanyQueryFilter
 
   QueryBuilder<Company, Company, QAfterFilterCondition>
       subscriptionStartDateBetween(
-    DateTime lower,
-    DateTime upper, {
+    DateTime? lower,
+    DateTime? upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
@@ -1590,6 +1933,142 @@ extension CompanyQueryFilter
         includeLower: includeLower,
         upper: upper,
         includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterFilterCondition>
+      subscriptionStatusEqualTo(
+    SubscriptionStatus value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'subscriptionStatus',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterFilterCondition>
+      subscriptionStatusGreaterThan(
+    SubscriptionStatus value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'subscriptionStatus',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterFilterCondition>
+      subscriptionStatusLessThan(
+    SubscriptionStatus value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'subscriptionStatus',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterFilterCondition>
+      subscriptionStatusBetween(
+    SubscriptionStatus lower,
+    SubscriptionStatus upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'subscriptionStatus',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterFilterCondition>
+      subscriptionStatusStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'subscriptionStatus',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterFilterCondition>
+      subscriptionStatusEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'subscriptionStatus',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterFilterCondition>
+      subscriptionStatusContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'subscriptionStatus',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterFilterCondition>
+      subscriptionStatusMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'subscriptionStatus',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterFilterCondition>
+      subscriptionStatusIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'subscriptionStatus',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterFilterCondition>
+      subscriptionStatusIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'subscriptionStatus',
+        value: '',
       ));
     });
   }
@@ -1715,6 +2194,18 @@ extension CompanyQuerySortBy on QueryBuilder<Company, Company, QSortBy> {
     });
   }
 
+  QueryBuilder<Company, Company, QAfterSortBy> sortByDaysUntilExpiry() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'daysUntilExpiry', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterSortBy> sortByDaysUntilExpiryDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'daysUntilExpiry', Sort.desc);
+    });
+  }
+
   QueryBuilder<Company, Company, QAfterSortBy> sortByEmail() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'email', Sort.asc);
@@ -1724,6 +2215,44 @@ extension CompanyQuerySortBy on QueryBuilder<Company, Company, QSortBy> {
   QueryBuilder<Company, Company, QAfterSortBy> sortByEmailDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'email', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterSortBy> sortByIsExpiringSoon() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isExpiringSoon', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterSortBy> sortByIsExpiringSoonDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isExpiringSoon', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterSortBy> sortByIsSubscriptionActive() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isSubscriptionActive', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterSortBy>
+      sortByIsSubscriptionActiveDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isSubscriptionActive', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterSortBy> sortByIsSubscriptionExpired() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isSubscriptionExpired', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterSortBy>
+      sortByIsSubscriptionExpiredDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isSubscriptionExpired', Sort.desc);
     });
   }
 
@@ -1775,6 +2304,18 @@ extension CompanyQuerySortBy on QueryBuilder<Company, Company, QSortBy> {
     });
   }
 
+  QueryBuilder<Company, Company, QAfterSortBy> sortBySubscriptionPlan() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'subscriptionPlan', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterSortBy> sortBySubscriptionPlanDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'subscriptionPlan', Sort.desc);
+    });
+  }
+
   QueryBuilder<Company, Company, QAfterSortBy> sortBySubscriptionStartDate() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'subscriptionStartDate', Sort.asc);
@@ -1785,6 +2326,18 @@ extension CompanyQuerySortBy on QueryBuilder<Company, Company, QSortBy> {
       sortBySubscriptionStartDateDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'subscriptionStartDate', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterSortBy> sortBySubscriptionStatus() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'subscriptionStatus', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterSortBy> sortBySubscriptionStatusDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'subscriptionStatus', Sort.desc);
     });
   }
 
@@ -1863,6 +2416,18 @@ extension CompanyQuerySortThenBy
     });
   }
 
+  QueryBuilder<Company, Company, QAfterSortBy> thenByDaysUntilExpiry() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'daysUntilExpiry', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterSortBy> thenByDaysUntilExpiryDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'daysUntilExpiry', Sort.desc);
+    });
+  }
+
   QueryBuilder<Company, Company, QAfterSortBy> thenByEmail() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'email', Sort.asc);
@@ -1884,6 +2449,44 @@ extension CompanyQuerySortThenBy
   QueryBuilder<Company, Company, QAfterSortBy> thenByIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterSortBy> thenByIsExpiringSoon() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isExpiringSoon', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterSortBy> thenByIsExpiringSoonDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isExpiringSoon', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterSortBy> thenByIsSubscriptionActive() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isSubscriptionActive', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterSortBy>
+      thenByIsSubscriptionActiveDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isSubscriptionActive', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterSortBy> thenByIsSubscriptionExpired() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isSubscriptionExpired', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterSortBy>
+      thenByIsSubscriptionExpiredDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isSubscriptionExpired', Sort.desc);
     });
   }
 
@@ -1935,6 +2538,18 @@ extension CompanyQuerySortThenBy
     });
   }
 
+  QueryBuilder<Company, Company, QAfterSortBy> thenBySubscriptionPlan() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'subscriptionPlan', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterSortBy> thenBySubscriptionPlanDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'subscriptionPlan', Sort.desc);
+    });
+  }
+
   QueryBuilder<Company, Company, QAfterSortBy> thenBySubscriptionStartDate() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'subscriptionStartDate', Sort.asc);
@@ -1945,6 +2560,18 @@ extension CompanyQuerySortThenBy
       thenBySubscriptionStartDateDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'subscriptionStartDate', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterSortBy> thenBySubscriptionStatus() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'subscriptionStatus', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Company, Company, QAfterSortBy> thenBySubscriptionStatusDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'subscriptionStatus', Sort.desc);
     });
   }
 
@@ -1997,10 +2624,34 @@ extension CompanyQueryWhereDistinct
     });
   }
 
+  QueryBuilder<Company, Company, QDistinct> distinctByDaysUntilExpiry() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'daysUntilExpiry');
+    });
+  }
+
   QueryBuilder<Company, Company, QDistinct> distinctByEmail(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'email', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<Company, Company, QDistinct> distinctByIsExpiringSoon() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isExpiringSoon');
+    });
+  }
+
+  QueryBuilder<Company, Company, QDistinct> distinctByIsSubscriptionActive() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isSubscriptionActive');
+    });
+  }
+
+  QueryBuilder<Company, Company, QDistinct> distinctByIsSubscriptionExpired() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isSubscriptionExpired');
     });
   }
 
@@ -2031,9 +2682,25 @@ extension CompanyQueryWhereDistinct
     });
   }
 
+  QueryBuilder<Company, Company, QDistinct> distinctBySubscriptionPlan(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'subscriptionPlan',
+          caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<Company, Company, QDistinct> distinctBySubscriptionStartDate() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'subscriptionStartDate');
+    });
+  }
+
+  QueryBuilder<Company, Company, QDistinct> distinctBySubscriptionStatus(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'subscriptionStatus',
+          caseSensitive: caseSensitive);
     });
   }
 
@@ -2058,7 +2725,7 @@ extension CompanyQueryProperty
     });
   }
 
-  QueryBuilder<Company, String, QQueryOperations> companyIdProperty() {
+  QueryBuilder<Company, String?, QQueryOperations> companyIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'companyId');
     });
@@ -2082,9 +2749,34 @@ extension CompanyQueryProperty
     });
   }
 
+  QueryBuilder<Company, int, QQueryOperations> daysUntilExpiryProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'daysUntilExpiry');
+    });
+  }
+
   QueryBuilder<Company, String, QQueryOperations> emailProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'email');
+    });
+  }
+
+  QueryBuilder<Company, bool, QQueryOperations> isExpiringSoonProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isExpiringSoon');
+    });
+  }
+
+  QueryBuilder<Company, bool, QQueryOperations> isSubscriptionActiveProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isSubscriptionActive');
+    });
+  }
+
+  QueryBuilder<Company, bool, QQueryOperations>
+      isSubscriptionExpiredProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isSubscriptionExpired');
     });
   }
 
@@ -2113,10 +2805,24 @@ extension CompanyQueryProperty
     });
   }
 
-  QueryBuilder<Company, DateTime, QQueryOperations>
+  QueryBuilder<Company, SubscriptionPlan, QQueryOperations>
+      subscriptionPlanProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'subscriptionPlan');
+    });
+  }
+
+  QueryBuilder<Company, DateTime?, QQueryOperations>
       subscriptionStartDateProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'subscriptionStartDate');
+    });
+  }
+
+  QueryBuilder<Company, SubscriptionStatus, QQueryOperations>
+      subscriptionStatusProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'subscriptionStatus');
     });
   }
 

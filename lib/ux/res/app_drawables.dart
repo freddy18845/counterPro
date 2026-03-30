@@ -5,26 +5,19 @@ class AppDrawables {
   static const String banner = "assets/images/banner.png";
   static const String bannerOne = "assets/images/banner1.png";
   static const String bannerTwo = "assets/images/banner2.png";
-  static const String pinPad = "assets/images/pinpad.png";
   static const String receipt = "assets/images/receipt.png";
   static const String greyCard = "assets/images/grey_card.png";
   static const String orangeCard = "assets/images/orange_card.png";
   static const String greenCard = "assets/images/green_card.png";
   static const String redCard = "assets/images/red_card.png";
   static const String blueCard = "assets/images/blue.png";
-  static const String successImage = "assets/images/success.gif";
   static const String visaImage = "assets/images/visa.png";
   static const String progressCard = "assets/images/progress_card.png";
-  static const String greenLoadingGif = "assets/images/loading-green.gif";
-  static const String mtn = "assets/images/networks/mtn.png";
-  static const String eMali = "assets/images/networks/emali.png";
-  static const String shareSha = "assets/images/networks/sharesha.png";
+
 
 
   static const String logoSVG = "assets/svgs/logo.svg";
   static const String darkLogoSVG = "assets/svgs/logo_dark.svg";
-  static const String fingerPrintSVG = "assets/svgs/finger_print.svg";
-  static const String faceIDSVG = "assets/svgs/face_id.svg";
   static const String emptyReceiptSVG = "assets/svgs/empty_receipt.svg";
   static const String moneySVG = "assets/svgs/money.svg";
   static const String settingsSVG = "assets/svgs/settings.svg";

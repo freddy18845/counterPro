@@ -13,7 +13,7 @@
 // import '../ux/models/shared/trnsaction_quuery_request.dart' as req;
 // import '../ux/models/terminal_sign_on_request.dart';
 // import '../ux/models/terminal_sign_on_response.dart';
-// import '../ux/utils/api_client.dart';
+// import '../ux/utils/api_service.dart';
 // import '../ux/utils/locator.dart';
 // import '../ux/utils/secure_storage.dart';
 // import '../ux/utils/shared/app.dart';

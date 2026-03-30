@@ -5,6 +5,7 @@ class CustomActionButton extends StatelessWidget {
   final VoidCallback onTap;
   final String label;
   final Color color;
+  final bool isDesktop;
   final CustomPainter icon;
 
   const CustomActionButton({
@@ -13,6 +14,7 @@ class CustomActionButton extends StatelessWidget {
     required this.label,
     required this.color,
     required this.icon,
+    required this.isDesktop,
   });
 
   @override
@@ -26,7 +28,7 @@ class CustomActionButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: color.withValues(alpha: 0.4)),
         ),
-        child: Row(
+        child:isDesktop? Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             SizedBox(
@@ -44,6 +46,10 @@ class CustomActionButton extends StatelessWidget {
               ),
             ),
           ],
+        ): SizedBox(
+          width: 18,
+          height: 18,
+          child: CustomPaint(painter: icon),
         ),
       ),
     );

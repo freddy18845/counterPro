@@ -8,20 +8,44 @@ class Company {
 
   late String name;
   String? slogan;
- late String companyId;
-
   late String email;
+  late String address;
   late String contactOne;
   late String contactTwo;
-  late String address;
-
   String? logoPath;
+  String? companyId;
 
-  // 🆕 Subscription
-  late DateTime subscriptionStartDate;
-  DateTime? subscriptionEndDate; // optional (for expiry)
+  // ← subscription fields
+  @Enumerated(EnumType.name)
+  SubscriptionPlan subscriptionPlan = SubscriptionPlan.basic;
 
-  // timestamps
+  @Enumerated(EnumType.name)
+  SubscriptionStatus subscriptionStatus = SubscriptionStatus.active;
+
+  DateTime? subscriptionStartDate;
+  DateTime? subscriptionEndDate;
+
   late DateTime createdAt;
   late DateTime updatedAt;
+
+  // ── Computed getters ──────────────────────────────────────
+  bool get isSubscriptionActive =>
+      subscriptionStatus == SubscriptionStatus.active &&
+          (subscriptionEndDate == null ||
+              subscriptionEndDate!.isAfter(DateTime.now()));
+
+  bool get isSubscriptionExpired =>
+      subscriptionEndDate != null &&
+          subscriptionEndDate!.isBefore(DateTime.now());
+
+  int get daysUntilExpiry {
+    if (subscriptionEndDate == null) return 999;
+    return subscriptionEndDate!.difference(DateTime.now()).inDays;
+  }
+
+  bool get isExpiringSoon => daysUntilExpiry <= 7 && daysUntilExpiry >= 0;
 }
+
+enum SubscriptionPlan { basic, pro, enterprise }
+
+enum SubscriptionStatus { active, expired, cancelled, trial }

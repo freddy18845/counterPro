@@ -152,18 +152,7 @@ class AppTheme {
     return '$prefix$yearShort$month$day$sequence';
   }
 
-  static Widget buildPinPadImage() {
-    return Container(
-      width: double.infinity,
-      margin: EdgeInsets.symmetric(vertical: ConstantUtil.verticalSpacing),
-      decoration: const BoxDecoration(
-        image: DecorationImage(
-          image: AssetImage(AppDrawables.pinPad),
-          fit: BoxFit.contain,
-        ),
-      ),
-    );
-  }
+
 
   static  String capitalizeFirst(String text) {
     if (text.isEmpty) return text;

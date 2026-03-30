@@ -8,15 +8,12 @@ class Product {
   late String name;
   late String sku;
   String? barcodeId;
-
   late int categoryId;       // ✅ int ref, not Category object
   late String categoryName;  // ✅ denormalized name
-
   late double costPrice;
   late double sellingPrice;
   late int stockQuantity;
   late int lowStockThreshold;
-
   String? imageUrl;
   late bool isActive;
   late DateTime createdAt;

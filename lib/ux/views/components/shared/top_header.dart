@@ -3,14 +3,16 @@ import 'package:eswaini_destop_app/ux/nav/app_navigator.dart';
 import 'package:eswaini_destop_app/ux/res/app_strings.dart';
 import 'package:eswaini_destop_app/ux/utils/shared/app.dart';
 import 'package:eswaini_destop_app/ux/utils/shared/screen.dart';
-import 'package:eswaini_destop_app/ux/views/components/dialogs/add_category.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:isar/isar.dart';
 import '../../../../platform/utils/constant.dart';
 import '../../../models/shared/transaction.dart';
 import '../../../res/app_drawables.dart';
 import '../../../res/app_theme.dart';
 import '../../../utils/sessionManager.dart';
+import '../../../utils/shared/api_config.dart';
+import '../../fragements/configSetting/sync_service.dart';
 import '../../fragements/shared/text_styles.dart';
 import '../dialogs/add_and_edit_users.dart';
 import '../dialogs/logout.dart';
@@ -61,7 +63,7 @@ final sessionManager = SessionManager();
           "${AppTheme.monthName(_now.month)}-"
           "${_now.year}";
 
-  void _handleLogout() {
+  Future<void> _handleLogout() async {
     if (isProcessing) {
       AppUtil.toastMessage(
         context: context,
@@ -69,6 +71,15 @@ final sessionManager = SessionManager();
       );
       return;
     }
+    // final isar = Isar.getInstance();
+    // await isar?.writeTxn(() async {
+    //   await isar.clear();
+    // });
+  bool  syncEnabled = await ApiConfig.isSyncEnabled();
+    if(syncEnabled){
+      SyncService().syncAll(pushLocal: true, pullRemote: false, context: context);
+    }
+
      AppUtil.displayDialog(
       dismissible: false,
       context: context,

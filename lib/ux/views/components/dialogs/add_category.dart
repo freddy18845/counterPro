@@ -121,7 +121,7 @@ class _AddEditCategoryDialogState extends State<AddEditCategoryDialog> {
         title: _isEditMode ? 'Edit Category' : 'Add Category',
         showCard: true,
         titleSize: 18,
-        cardHeight: 350,
+        cardHeight: 370,
         cardWidth: 480,
         onClose: () => Navigator.pop(context),
         child: Form(

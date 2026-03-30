@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 
+import 'package:eswaini_destop_app/platform/utils/syncManager.dart';
 import 'package:eswaini_destop_app/ux/views/components/shared/stock_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
@@ -16,18 +17,26 @@ import 'package:eswaini_destop_app/ux/utils/shared/screen.dart';
 
 import '../../../Providers/transaction_provider.dart';
 import '../../../models/shared/transaction.dart';
+import '../../../utils/shared/api_config.dart';
 import '../../../utils/shared/app.dart';
+import '../../../utils/shared/stock_monitor.dart';
+import '../../fragements/configSetting/sync_service.dart';
 import '../dialogs/add_and_edit_users.dart';
 import '../dialogs/logout.dart';
 
 class SummaryData extends StatefulWidget {
   final bool isProcessing;
   final bool isHomeScreen;
+  final bool   syncEnabled;
+  final Function(bool) onSyncChanged;
 
   const SummaryData({
     super.key,
     this.isHomeScreen = false,
     required this.isProcessing,
+    required this.onSyncChanged,
+    required this.syncEnabled,
+
   });
 
   @override
@@ -39,8 +48,8 @@ class _SummaryDataState extends State<SummaryData> {
   final sessionManager = SessionManager();
   final transactionManager = TransactionManager();
 
-
   bool _isHovering = false;
+  bool _isSyncEnabledLocal = false;
 
   @override
   void initState() {
@@ -50,6 +59,7 @@ class _SummaryDataState extends State<SummaryData> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _startScrolling();
+
     });
   }
 
@@ -100,9 +110,7 @@ class _SummaryDataState extends State<SummaryData> {
               onTap: () => AppUtil.displayDialog(
                 dismissible: false,
                 context: context,
-                child: AddEditUsersDialog(
-                  user: sessionManager.currentUser,
-                ),
+                child: AddEditUsersDialog(user: sessionManager.currentUser),
               ),
             )
           : _actionButton(
@@ -126,11 +134,20 @@ class _SummaryDataState extends State<SummaryData> {
     return _actionButton(
       icon: AppDrawables.lockSVG,
       label: !isDesktop ? AppStrings.logout : AppStrings.lockApp,
-      onTap: () => AppUtil.displayDialog(
-        dismissible: false,
-        context: context,
-        child: LogoutDialog(),
-      ),
+      onTap: () {
+        if (widget.syncEnabled) {
+          SyncService().syncAll(
+            pushLocal: true,
+            pullRemote: false,
+            context: context,
+          );
+        }
+        AppUtil.displayDialog(
+          dismissible: false,
+          context: context,
+          child: LogoutDialog(),
+        );
+      },
     );
   }
 
@@ -155,6 +172,8 @@ class _SummaryDataState extends State<SummaryData> {
     });
   }
 
+
+
   // =========================
   // BUILD
   // =========================
@@ -169,19 +188,22 @@ class _SummaryDataState extends State<SummaryData> {
           _buildLeftAction(isDesktop),
           _buildDivider(isSummary: false),
 
-      InkWell(
-        onTap: () {
-          AppNavigator.gotoTransaction(
-            context: context,
-            data: ConstantUtil.options[3],
-          );
-        },
-        child: _buildCard(
-            text: transactionManager.totalAmount.toStringAsFixed(2),
-            image: AppDrawables.moneySVG,
-            isShowCurrency: true,
-            title:isDesktop?AppStrings.totalTransactions: "${AppStrings.total}:",
-          ),),
+          InkWell(
+            onTap: () {
+              AppNavigator.gotoTransaction(
+                context: context,
+                data: ConstantUtil.options[3],
+              );
+            },
+            child: _buildCard(
+              text: transactionManager.totalAmount.toStringAsFixed(2),
+              image: AppDrawables.moneySVG,
+              isShowCurrency: true,
+              title: isDesktop
+                  ? AppStrings.totalTransactions
+                  : "${AppStrings.total}:",
+            ),
+          ),
 
           _buildDivider(isSummary: false),
 
@@ -199,18 +221,59 @@ class _SummaryDataState extends State<SummaryData> {
 
           _buildDivider(isSummary: false),
 
-      InkWell(
-        onTap: () {
-          AppNavigator.gotoTransaction(
-            context: context,
-            data: ConstantUtil.options[3],
-          );
-        },child:    _buildCard(
-            text: transactionManager.filtered.length.toString(),
-            image: AppDrawables.moneySVG,
-            isShowCurrency: false,
-            title: isDesktop ? AppStrings.totalCount : AppStrings.count,
-          ),),
+          Container(
+            height: isDesktop ? 42 : 32,
+            padding: EdgeInsets.symmetric(
+              vertical: 8,
+              horizontal: isDesktop ? 8 : 4,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white12,
+              border: Border.all(color: Colors.white, width: 0.7),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min, // Keeps the row compact
+              children: [
+                const Text(
+                  "Enable Auto Sync",
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.white,
+                  ), // Adjusted for the 30px height
+                ),
+                const SizedBox(width: 8),
+                Transform.scale(
+                  scale:
+                      0.8, // Slightly scale down to fit comfortably in 30px height
+                  child: Switch(
+                    activeColor: AppColors.loaderGreen,
+                    value: widget.syncEnabled,
+                    onChanged: (value) async {
+                      String? baseurl = await ApiConfig.getBaseUrl();
+                      if (baseurl.isEmpty ||
+                          baseurl == "https://api.counterproapp.com/v1") {
+                        AppUtil.toastMessage(
+                          message: AppStrings
+                              .pleaseOnlyCompaniesCanHaveAPIAccessandAPIKey,
+                          context: context,
+                          backgroundColor: AppColors.secondaryColor,
+                        );
+                      } else {
+                        setState(() {
+                          _isSyncEnabledLocal = value;
+                        });
+                        ApiConfig.setSyncEnabled(value);
+                        if (widget.syncEnabled && baseurl.isEmpty) {
+                          SyncManager().initAndSync(context);
+                        }
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
 
           _buildDivider(isSummary: false),
           StockIcon(),
@@ -252,31 +315,37 @@ class _SummaryDataState extends State<SummaryData> {
                 child: Row(
                   children: [
                     _summaryItem(
-                      isDesktop?AppStrings.refundedTransaction: AppStrings.refunded,
+                      isDesktop
+                          ? AppStrings.refundedTransaction
+                          : AppStrings.refunded,
                       transactionManager.refundedCount,
                       isDesktop,
                     ),
                     _buildDivider(isSummary: true),
                     _summaryItem(
-                      isDesktop?AppStrings.voidTransactions: AppStrings.voidText,
+                      isDesktop
+                          ? AppStrings.voidTransactions
+                          : AppStrings.voidText,
                       transactionManager.voidedCount,
                       isDesktop,
                     ),
                     _buildDivider(isSummary: true),
                     _summaryItem(
-                      isDesktop?AppStrings.cashTransaction:  AppStrings.cash,
+                      isDesktop ? AppStrings.cashTransaction : AppStrings.cash,
                       transactionManager.cashCount,
                       isDesktop,
                     ),
                     _buildDivider(isSummary: true),
                     _summaryItem(
-                      isDesktop?AppStrings.mobileTransactions:AppStrings.mobile,
+                      isDesktop
+                          ? AppStrings.mobileTransactions
+                          : AppStrings.mobile,
                       transactionManager.mobileCount,
                       isDesktop,
                     ),
                     _buildDivider(isSummary: true),
                     _summaryItem(
-                      isDesktop?AppStrings.cardTransactions: AppStrings.card,
+                      isDesktop ? AppStrings.cardTransactions : AppStrings.card,
                       transactionManager.cardCount,
                       isDesktop,
                     ),
@@ -284,6 +353,12 @@ class _SummaryDataState extends State<SummaryData> {
                     _summaryItem(
                       AppStrings.split,
                       transactionManager.splitCount,
+                      isDesktop,
+                    ),
+                    _buildDivider(isSummary: true),
+                    _summaryItem(
+                      isDesktop ? AppStrings.totalCount : AppStrings.count,
+                      transactionManager.filtered.length,
                       isDesktop,
                     ),
                   ],

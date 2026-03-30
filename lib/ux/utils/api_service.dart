@@ -1,155 +1,221 @@
+// ─────────────────────────────────────────────────────────────
+// ── API SERVICE (core HTTP client) ───────────────────────────
+// ─────────────────────────────────────────────────────────────
+import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:eswaini_destop_app/ux/utils/shared/api_config.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
-import 'package:intl/intl.dart';
-import '../../platform/utils/constant.dart';
+import '../models/shared/api_response.dart';
+
+class ApiService {
+  static final ApiService _instance = ApiService._internal();
+  factory ApiService() => _instance;
+  ApiService._internal();
+
+  static const Duration _timeout = Duration(seconds: 30);
+
+  // ── Build headers ─────────────────────────────────────────
+  // lib/platform/services/api_service.dart
 
 
-class ApiClient {
-  static final ApiClient _instance = ApiClient._internal();
+  Future<Map<String, String>> _headers() async {
+    final token  = await ApiConfig.getToken();
+    final apiKey = await ApiConfig.getApiKey();
 
-  factory ApiClient() {
-    return _instance;
+    return {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      // ← trim again just to be safe
+      if (apiKey != null) 'X-API-Key': apiKey.trim(),
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
   }
 
-  final http.Client _client = http.Client();
-  bool _debugModeEnabled = false;
-  File? _logFile;
+  // ── GET ───────────────────────────────────────────────────
+  Future<ApiResponse<Map<String, dynamic>>> get(
+      String endpoint) async {
+    try {
+      final baseUrl = await ApiConfig.getBaseUrl();
+      final headers = await _headers();
+      final uri = Uri.parse('$baseUrl$endpoint');
 
-  ApiClient._internal();
+      debugPrint('🌐 GET $uri');
+      debugPrint('🌐 Header $headers');
 
-  // Initialize the API client with debug mode from config
-  Future<void> initialize(bool isDebugMode) async {
-    _debugModeEnabled = isDebugMode;
-    if (_debugModeEnabled) {
-      await _initializeLogFile();
+      final response = await http
+          .get(uri, headers: headers)
+          .timeout(_timeout);
+
+      return _handleResponse(response);
+    } on SocketException {
+      return ApiResponse.error('No internet connection');
+    } on HttpException catch (e) {
+      return ApiResponse.error('HTTP error: $e');
+    } catch (e) {
+      return ApiResponse.error('Request failed: $e');
     }
   }
 
-  //Main Function
+  // ── POST ──────────────────────────────────────────────────
+  Future<ApiResponse<Map<String, dynamic>>> post(
+      String endpoint,
+      Map<String, dynamic> body,
+      ) async {
+    try {
+      final baseUrl = await ApiConfig.getBaseUrl();
+      final headers = await _headers();
+      final uri = Uri.parse('$baseUrl$endpoint');
 
-  Future<http.Response> post(
-      String url, {
-        Map<String, String>? headers,
-        Object? body,
-        Duration timeout = const Duration(seconds: ConstantUtil.apiTimeDuration),
-      }) async {
-    // 1. Check Connectivity First
-    final List<ConnectivityResult> connectivityResult = await Connectivity().checkConnectivity();
+      debugPrint('🌐 POST $uri');
 
-    if (connectivityResult.contains(ConnectivityResult.none)) {
-      await _writeToLog('--- POST BLOCKED ---\nURL: $url\nError: No Internet Connection\n');
-      throw const SocketException('No Internet Connection'); // Stop execution here
+      final response = await http
+          .post(uri,
+          headers: headers, body: jsonEncode(body))
+          .timeout(_timeout);
+
+      return _handleResponse(response);
+    } on SocketException {
+      return ApiResponse.error('No internet connection');
+    } catch (e) {
+      return ApiResponse.error('Request failed: $e');
     }
+  }
 
-    headers ??= {'Content-Type': 'application/json'};
-    final stopwatch = Stopwatch()..start();
-    await _logRequest('POST', url, headers, body);
+  // ── PUT ───────────────────────────────────────────────────
+  Future<ApiResponse<Map<String, dynamic>>> put(
+      String endpoint,
+      Map<String, dynamic> body,
+      ) async {
+    try {
+      final baseUrl = await ApiConfig.getBaseUrl();
+      final headers = await _headers();
+      final uri = Uri.parse('$baseUrl$endpoint');
+
+      debugPrint('🌐 PUT $uri');
+
+      final response = await http
+          .put(uri,
+          headers: headers, body: jsonEncode(body))
+          .timeout(_timeout);
+
+      return _handleResponse(response);
+    } on SocketException {
+      return ApiResponse.error('No internet connection');
+    } catch (e) {
+      return ApiResponse.error('Request failed: $e');
+    }
+  }
+
+  // ── DELETE ────────────────────────────────────────────────
+  Future<ApiResponse<Map<String, dynamic>>> delete(
+      String endpoint) async {
+    try {
+      final baseUrl = await ApiConfig.getBaseUrl();
+      final headers = await _headers();
+      final uri = Uri.parse('$baseUrl$endpoint');
+
+      debugPrint('🌐 DELETE $uri');
+
+      final response = await http
+          .delete(uri, headers: headers)
+          .timeout(_timeout);
+
+      return _handleResponse(response);
+    } on SocketException {
+      return ApiResponse.error('No internet connection');
+    } catch (e) {
+      return ApiResponse.error('Request failed: $e');
+    }
+  }
+
+  // ── Handle response ───────────────────────────────────────
+  ApiResponse<Map<String, dynamic>> _handleResponse(
+      http.Response response) {
+    debugPrint('📡 ${response.statusCode} ${response.request?.url}');
 
     try {
-      final response = await _client
-          .post(Uri.parse(url), headers: headers, body: body)
-          .timeout(timeout);
+      final body = jsonDecode(response.body)
+      as Map<String, dynamic>;
 
-      stopwatch.stop();
-      await _logResponse('POST', response.statusCode, response.body, stopwatch.elapsed);
-      return response;
-    } catch (e) {
-      stopwatch.stop();
-      await _writeToLog(
-        '--- POST ERROR ---\nURL: $url\nError: $e\nDuration: ${stopwatch.elapsed.inMilliseconds}ms\n',
-      );
-      rethrow;
-    }
-  }
-
-  //FIle Logging Methods
-  // Initialize log file for debug mode
-  Future<void> _initializeLogFile() async {
-    try {
-      Directory? logDirectory;
-
-      if (Platform.isAndroid) {
-        final downloadsDir = Directory('/storage/emulated/0/Download');
-        if (await downloadsDir.exists()) {
-          logDirectory = Directory('${downloadsDir.path}/ApiLogs');
-        }
+      if (response.statusCode >= 200 &&
+          response.statusCode < 300) {
+        return ApiResponse.success(body,
+            statusCode: response.statusCode);
       }
 
-      if (logDirectory == null) {
-        throw Exception("Unable to determine accessible log directory");
+      // handle common errors
+      final message = body['message'] ??
+          body['error'] ??
+          'Server error ${response.statusCode}';
+
+      if (response.statusCode == 401) {
+        ApiConfig.clearToken(); // token expired
+        return ApiResponse.error('Session expired. Please log in again.',
+            statusCode: 401);
       }
 
-      // Create directory if it doesn't exist
-      if (!await logDirectory.exists()) {
-        await logDirectory.create(recursive: true);
+      return ApiResponse.error(message.toString(),
+          statusCode: response.statusCode);
+    } catch (_) {
+      return ApiResponse.error(
+          'Invalid server response',
+          statusCode: response.statusCode);
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// ── AUTH SERVICE ─────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+class AuthApiService {
+  final _api = ApiService();
+
+  Future<ApiResponse<Map<String, dynamic>>> login({
+    required String email,
+    required String password,
+    required String apiKey,
+  }) async {
+    await ApiConfig.setApiKey(apiKey);
+
+    final response = await _api.post('/auth/login', {
+      'email': email,
+      'password': password,
+    });
+
+    if (response.success && response.data != null) {
+      final token = response.data!['token'] as String?;
+      if (token != null) {
+        await ApiConfig.setToken(token);
       }
-
-      // Create file with today's date
-      final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-      _logFile = File('${logDirectory.path}/rise_pay_logs_$today.txt');
-
-      if (!await _logFile!.exists()) {
-        await _logFile!.create();
-        await _writeToLog('=== API Logs Started: ${DateTime.now().toIso8601String()} ===\n');
-      }
-
-      if (kDebugMode) print('Logging to: ${_logFile!.path}');
-    } catch (e) {
-      if (kDebugMode) print('Error initializing log file: $e');
     }
+
+    return response;
   }
 
-  // Write log entry to file
-  Future<void> _writeToLog(String message) async {
-    if (!_debugModeEnabled || _logFile == null) return;
-    try {
-      final timestamp = DateFormat('yyyy-MM-dd HH:mm:ss.SSS').format(DateTime.now());
-      final logEntry = '[$timestamp] $message\n';
-      await _logFile!.writeAsString(logEntry, mode: FileMode.append);
-    } catch (e) {
-      if (kDebugMode) print('Error writing to log file: $e');
-    }
+  Future<ApiResponse<Map<String, dynamic>>>
+  refreshToken() async {
+    return _api.post('/auth/refresh', {});
   }
 
-  // Log API request details
-  Future<void> _logRequest(
-      String method, String url, Map<String, String>? headers, Object? body) async {
-    if (!_debugModeEnabled) return;
-
-    final logMessage = StringBuffer();
-    logMessage.writeln('--- $method REQUEST ---');
-    logMessage.writeln('URL: $url');
-
-    if (headers != null && headers.isNotEmpty) {
-      logMessage.writeln('Headers:');
-      headers.forEach((key, value) {
-        logMessage.writeln('  $key: $value');
-      });
-    }
-    if (body != null) {
-      logMessage.writeln('Body: $body');
-    }
-    await _writeToLog(logMessage.toString());
+  Future<void> logout() async {
+    await _api.post('/auth/logout', {});
+    await ApiConfig.clearToken();
   }
 
-  // Log API response details
-  Future<void> _logResponse(
-      String method, int statusCode, String responseBody, Duration duration) async {
-    if (!_debugModeEnabled) return;
+  Future<ApiResponse<Map<String, dynamic>>> validateApiKey(
+      String apiKey) async {
 
-    final logMessage = StringBuffer();
-    logMessage.writeln('--- $method RESPONSE ---');
-    logMessage.writeln('Status Code: $statusCode');
-    logMessage.writeln('Duration: ${duration.inMilliseconds}ms');
-    logMessage.writeln('Response Body: $responseBody');
-    logMessage.writeln(''); // Empty line for separation
+    // ← save first
+    await ApiConfig.setApiKey(apiKey.trim());
 
-    await _writeToLog(logMessage.toString());
-  }
+    // ← then make the request — headers will now include the key
+    final response = await _api.get('/auth/validate');
 
-  void close() {
-    _client.close();
+    debugPrint('🔑 Validate response: ${response.success}');
+    debugPrint('🔑 Validate error: ${response.error}');
+    debugPrint('🔑 Validate data: ${response.data}');
+
+    return response;
   }
 }

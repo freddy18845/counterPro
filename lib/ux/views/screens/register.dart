@@ -6,19 +6,19 @@ import 'package:flutter/material.dart';
 import 'package:eswaini_destop_app/ux/utils/shared/screen.dart';
 import 'package:eswaini_destop_app/ux/views/components/shared/create_company.dart';
 import 'package:flutter_svg/svg.dart';
-import '../../models/shared/pos_user.dart';
+import 'package:isar/isar.dart';
 import '../../res/app_colors.dart';
 import '../../res/app_drawables.dart';
 import '../components/shared/footer.dart';
 
-class SetUPScreen extends StatefulWidget {
-  const SetUPScreen({super.key});
+class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
 
   @override
-  State<SetUPScreen> createState() => _SetUPScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _SetUPScreenState extends State<SetUPScreen> {
+class _RegisterScreenState extends State<RegisterScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
   final int _totalPages = 2;
@@ -38,13 +38,19 @@ class _SetUPScreenState extends State<SetUPScreen> {
     }
   }
 
-  void _previousPage() {
+  Future<void> _previousPage() async {
     if (_currentPage > 0) {
       _pageController.previousPage(
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeInOut,
       );
+      return;
     }
+    final isar = Isar.getInstance();
+    await isar?.writeTxn(() async {
+      await isar.clear();
+    });
+    Navigator.pop(context);
   }
 
   @override

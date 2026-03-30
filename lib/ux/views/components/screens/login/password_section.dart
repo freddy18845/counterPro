@@ -15,6 +15,9 @@ import "../../../../res/app_colors.dart";
 import "../../../../res/app_drawables.dart";
 import "../../../../utils/remember_me.dart";
 import "../../../../utils/sessionManager.dart";
+import "../../../../utils/shared/api_config.dart";
+import "../../../fragements/configSetting/sync_service.dart";
+import "../../dialogs/force_password_change.dart";
 import "../../shared/btn.dart";
 import "../../shared/login_input.dart";
 import "../../../../utils/shared/screen.dart";
@@ -103,7 +106,6 @@ class _State extends State<LoginPasswordSection> {
   // ── Login ─────────────────────────────────────────────────
   Future<void> login() async {
     if (!_loginFormKey.currentState!.validate()) return;
-
     setState(() => isLoading = true);
 
     final user = await isar.posUsers
@@ -116,32 +118,58 @@ class _State extends State<LoginPasswordSection> {
         .isActiveEqualTo(true)
         .findFirst();
 
-    if (!mounted) return;
-
-    
-
+    // ← also check with temp password for pulled users
+    PosUser? pulledUser;
     if (user == null) {
-      AppUtil.toastMessage(
-        message: '❌ Invalid Email or Password',
-        context: context,
-        backgroundColor: Colors.red,
-      );
+      pulledUser = await isar.posUsers
+          .where()
+          .filter()
+          .emailEqualTo(widget.emailController.text.trim())
+          .and()
+          .passwordHashEqualTo('changeme123')
+          .and()
+          .isActiveEqualTo(true)
+          .findFirst();
+    }
+
+    setState(() => isLoading = false);
+
+    final loggedInUser = user ?? pulledUser;
+
+    if (loggedInUser == null) {
+      if (mounted) {
+        AppUtil.toastMessage(
+          message: '❌ Invalid email or password',
+          context: context,
+          backgroundColor: Colors.red,
+        );
+      }
       return;
     }
 
-    // ✅ SAVE remember me
     await _rememberMe.save(
       email: widget.emailController.text.trim(),
       password: widget.passwordController.text,
       rememberMe: _rememberMeChecked,
     );
 
-    // ✅ Save session
-    SessionManager().save(user, context);
-    await Future.delayed(const Duration(milliseconds: 1000));
-    setState(() {
-      isLoading = false;
-    });
+    await SessionManager().save(loggedInUser, context);
+
+    if (!mounted) return;
+
+    // ← if temp password — force change before going home
+    if (pulledUser != null) {
+      await AppUtil.displayDialog(
+        context: context,
+        dismissible: false,
+        child: ForcePasswordChangeDialog(user: pulledUser),
+      );
+      return; // dialog handles navigation after change
+    }
+    bool  syncEnabled = await ApiConfig.isSyncEnabled();
+    if(syncEnabled && !SessionManager().isCashier){
+      SyncService().syncAll(pushLocal: true, pullRemote: false, context: context);
+    }
     AppNavigator.gotoHome(TransactionData(),context: context);
   }
 

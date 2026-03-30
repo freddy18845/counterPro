@@ -1,11 +1,13 @@
+import 'package:shared_preferences/shared_preferences.dart';
+
 class ApiConfig {
-  static const String _prefBaseUrl = 'api_base_url';
-  static const String _prefApiKey = 'api_key';
-  static const String _prefToken = 'auth_token';
+  static const String _prefBaseUrl     = 'api_base_url';
+  static const String _prefApiKey      = 'api_key';
+  static const String _prefToken       = 'auth_token';
   static const String _prefSyncEnabled = 'sync_enabled';
 
   static const String defaultBaseUrl =
-      'https://api.counterproapp.com/v1';
+      '';
 
   static Future<String> getBaseUrl() async {
     final prefs = await SharedPreferences.getInstance();
@@ -50,5 +52,12 @@ class ApiConfig {
   static Future<void> setSyncEnabled(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_prefSyncEnabled, enabled);
+  }
+
+  static Future<void> clearAll() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_prefApiKey);
+    await prefs.remove(_prefToken);
+    await prefs.remove(_prefSyncEnabled);
   }
 }

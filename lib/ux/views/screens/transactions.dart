@@ -240,6 +240,8 @@ final transactionManager = TransactionManager();
         context: context, // ← add this
         transactions: _exportRows,
         fileName: _exportFileName,
+        tableName: 'transactions',
+
       );
     } finally {
       setState(() => _isExporting = false);
@@ -296,6 +298,7 @@ final transactionManager = TransactionManager();
 
   @override
   Widget build(BuildContext context) {
+    final bool isDesktop = ScreenUtil.width >= 900;
     return BaseTemplate(
       isProcessing: isLoading,
       contentSection:  CustomCard(
@@ -415,6 +418,7 @@ final transactionManager = TransactionManager();
                       Opacity(
                         opacity:  transactionManager.filtered.isEmpty ? 0.4 : 1.0,
                         child: CustomActionButton(
+isDesktop: isDesktop,
                           onTap:  transactionManager.filtered.isEmpty ? () {} : _exportExcel,
                           label: 'Excel',
                           color: const Color(0xFF1D6F42),
@@ -426,6 +430,7 @@ final transactionManager = TransactionManager();
                       Opacity(
                         opacity:  transactionManager.filtered.isEmpty ? 0.4 : 1.0,
                         child: CustomActionButton(
+                          isDesktop: isDesktop,
                           onTap:  transactionManager.filtered.isEmpty ? () {} : _exportWord,
                           label: 'Word',
                           color: const Color(0xFF2B579A),

@@ -6,22 +6,16 @@ Future<void> precacheAppImages(BuildContext context) async {
   final rasterImages = [
     AppDrawables.loadingScreen,
     AppDrawables.banner,
-    AppDrawables.pinPad,
     AppDrawables.receipt,
     AppDrawables.orangeCard,
     AppDrawables.greyCard,
     AppDrawables.blueCard,
     AppDrawables.greenCard,
     AppDrawables.redCard,
-    AppDrawables.successImage,
     AppDrawables.visaImage,
     AppDrawables.bannerOne,
     AppDrawables.bannerTwo,
     AppDrawables.progressCard,
-    AppDrawables.greenLoadingGif,
-    AppDrawables.mtn,
-    AppDrawables.shareSha,
-    AppDrawables.eMali,
   ];
 
   for (final imagePath in rasterImages) {
@@ -38,8 +32,6 @@ Future<void> precacheAppImages(BuildContext context) async {
   final svgImages = [
     AppDrawables.logoSVG,
     AppDrawables.darkLogoSVG,
-    AppDrawables.fingerPrintSVG,
-    AppDrawables.faceIDSVG,
     AppDrawables.emptyReceiptSVG,
     AppDrawables.moneySVG,
     AppDrawables.settingsSVG,

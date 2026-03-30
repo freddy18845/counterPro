@@ -87,7 +87,7 @@ class _ReportScreenState extends State<ReportScreen> {
   double _grossProfit = 0;
   int _totalOrders = 0;
   int _totalItemsSold = 0;
-
+  final bool isDesktop = ScreenUtil.width >= 900;
   @override
   void initState() {
     super.initState();
@@ -338,7 +338,7 @@ class _ReportScreenState extends State<ReportScreen> {
       await ExportService.exportToExcel(
         context: context,
         transactions: _exportRows,
-        fileName: _exportFileName,
+        fileName: _exportFileName, tableName: 'reports',
       );
     } finally {
       setState(() => _isExporting = false);
@@ -360,6 +360,7 @@ class _ReportScreenState extends State<ReportScreen> {
 
   @override
   Widget build(BuildContext context) {
+
     return BaseTemplate(
       isProcessing: _isLoading,
       contentSection:CustomCard(
@@ -505,6 +506,7 @@ class _ReportScreenState extends State<ReportScreen> {
                   Row(
                     children: [
                       CustomActionButton(
+                        isDesktop: isDesktop,
                         onTap: _exportExcel,
                         label: 'Excel',
                         color: const Color(0xFF1D6F42),
@@ -512,6 +514,7 @@ class _ReportScreenState extends State<ReportScreen> {
                       ),
                       const SizedBox(width: 6),
                       CustomActionButton(
+                        isDesktop: isDesktop,
                         onTap: _exportWord,
                         label: 'Word',
                         color: const Color(0xFF2B579A),
@@ -1088,7 +1091,7 @@ class _ReportScreenState extends State<ReportScreen> {
                                               ),
                                               Expanded(
                                                 child: Text(
-                                                    '\$${p.revenue.toStringAsFixed(2)}',
+                                                    '${ConstantUtil.currencySymbol} ${p.revenue.toStringAsFixed(2)}',
                                                     textAlign: TextAlign
                                                         .right,
                                                     style: TextStyle(

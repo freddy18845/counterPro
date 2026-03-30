@@ -1,7 +1,6 @@
 #include <flutter/dart_project.h>
 #include <flutter/flutter_view_controller.h>
 #include <windows.h>
-#include <flutter_local_notifications/flutter_local_notifications_plugin.h>
 #include "flutter_window.h"
 #include "utils.h"
 

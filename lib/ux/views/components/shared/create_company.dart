@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'dart:math';
-import 'package:eswaini_destop_app/ux/res/app_theme.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -56,7 +55,7 @@ class _CreateCompanyState extends State<CreateCompany> {
 
   Future<void> _loadCompany() async {
     final company =
-    await isar.companys.where().findFirst();
+    await isar?.companys.where().findFirst();
     if (company != null) {
       _company = company;
       nameController.text = company.name;
@@ -97,7 +96,8 @@ class _CreateCompanyState extends State<CreateCompany> {
       ..contactTwo = contactTwoController.text.trim()
       ..logoPath = _pickedLogo?.path
       ..createdAt = DateTime.now()
-      ..updatedAt = DateTime.now();
+      ..updatedAt = DateTime.now()
+    ..subscriptionStartDate = DateTime.now();
     if (widget.isSetUp) {
       final lettersOnly = nameController.text
           .replaceAll(RegExp(r'[^a-zA-Z]'), '')
@@ -118,8 +118,8 @@ class _CreateCompanyState extends State<CreateCompany> {
           DateTime.now().add(const Duration(days: 60));
     }
 
-    await isar.writeTxn(() async {
-      await isar.companys.put(company); // make sure collection is correct
+    await isar?.writeTxn(() async {
+      await isar?.companys.put(company); // make sure collection is correct
     });
     nameController.text = '';
     sloganController.text = '';
@@ -158,7 +158,7 @@ class _CreateCompanyState extends State<CreateCompany> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isFetching) {
+    if (!widget.isSetUp &&_isFetching) {
       return Center(
           child:  CupertinoActivityIndicator(radius: 18, color: Colors.green));
     }

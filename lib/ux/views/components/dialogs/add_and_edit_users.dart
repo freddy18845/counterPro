@@ -31,11 +31,11 @@ class _AddEditUsersDialogState extends State<AddEditUsersDialog> {
         title: _isEditMode ? 'Edit Users' : 'Add Users',
         showCard: true,
         titleSize: 18,
-        cardHeight: 520,
+        cardHeight: 470,
         cardWidth: 500,
         onClose: () => Navigator.pop(context),
         child: SizedBox(
-          height: 500,
+          height: 450,
           width: 470,
           child: AddUser(
           user: widget.user,

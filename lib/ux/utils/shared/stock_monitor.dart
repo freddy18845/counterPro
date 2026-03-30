@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:eswaini_destop_app/ux/models/shared/product.dart';
 import 'package:eswaini_destop_app/ux/models/shared/notification_settings.dart';
 import 'package:eswaini_destop_app/ux/models/shared/notification_cooldown.dart';
+import 'package:eswaini_destop_app/ux/utils/sessionManager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:isar/isar.dart';
@@ -192,12 +193,13 @@ class StockMonitorService {
 
   static Future<void> checkStock() async {
     print("🔍 Running stock check...");
+    print("🔍 ${StockMonitorService.enablePopupAlerts}");
 
     // Reload settings in case they were updated
     _settings = await isar.notificationSettings.where().findFirst();
 
     // Check if notifications are enabled globally
-    if (_settings == null || !_settings!.enableNotifications) {
+    if (_settings == null || !_settings!.enableNotifications || SessionManager().isCashier) {
       print("⚠️ Notifications are disabled");
       return;
     }

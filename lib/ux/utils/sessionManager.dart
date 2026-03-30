@@ -3,6 +3,7 @@ import 'package:eswaini_destop_app/ux/models/shared/company.dart';
 import 'package:eswaini_destop_app/ux/models/shared/pos_user.dart';
 import 'package:eswaini_destop_app/ux/nav/app_navigator.dart';
 import 'package:eswaini_destop_app/ux/utils/shared/app.dart';
+import 'package:eswaini_destop_app/ux/utils/shared/subscriptionManger.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:isar/isar.dart';
 
@@ -47,6 +48,7 @@ class SessionManager {
   Future<void> save(PosUser user , BuildContext context) async {
     _currentUser = user;
     await _loadCompany(context);
+    await SubscriptionManager().load();
   }
 
   // ── Load company from Isar ────────────────────────────────

@@ -8,6 +8,7 @@ import '../../../res/app_strings.dart';
 import '../../../utils/sessionManager.dart';
 import '../../../utils/shared/app.dart';
 import '../../../utils/shared/screen.dart';
+import '../../../utils/shared/subscriptionManger.dart';
 import 'btn.dart';
 import 'login_input.dart';
 
@@ -32,7 +33,7 @@ class AddUser extends StatefulWidget {
 class _AddUserState extends State<AddUser> {
   final isar = IsarService().isar;
   final _formKey = GlobalKey<FormState>();
-  UserRole selectedRole = UserRole.cashier;
+  UserRole selectedRole = UserRole.admin;
   TextEditingController nameController = TextEditingController();
   TextEditingController emailController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
@@ -55,7 +56,7 @@ class _AddUserState extends State<AddUser> {
     setState(() => isLoading = true);
 
     // check if email already exists
-    final existing = await isar.posUsers
+    final existing = await isar?.posUsers
         .where()
         .filter()
         .emailEqualTo(emailController.text.trim())
@@ -79,8 +80,8 @@ class _AddUserState extends State<AddUser> {
       ..createdAt = DateTime.now()
       ..updatedAt = DateTime.now();
 
-    await isar.writeTxn(() async {
-      await isar.posUsers.put(user);
+    await isar?.writeTxn(() async {
+      await isar?.posUsers.put(user);
     });
 
     setState(() => isLoading = false);
@@ -166,36 +167,93 @@ class _AddUserState extends State<AddUser> {
           ),
 
           const SizedBox(height: 16),
+Row(
 
-          // password
-          InputField(
-            label: _isEdit
-                ? 'New Password (leave blank to keep)'
-                : 'Password',
-            controller: passwordController,
-            hintText: 'Enter password',
-            prexIcon: Icons.lock_outlined,
-            obscureText: true,
-            showVisibilityToggle: true,
-            validator: (v) {
-              if (!_isEdit && (v == null || v.length < 4)) {
-                return 'Min 4 characters';
-              }
-              return null;
-            },
+  children: [
+  Expanded(
+    flex: 2,
+    child:  InputField(
+    label: _isEdit
+        ? 'New Password (leave blank to keep)'
+        : 'Password',
+    controller: passwordController,
+    hintText: 'Enter password',
+    prexIcon: Icons.lock_outlined,
+    obscureText: true,
+    showVisibilityToggle: true,
+    validator: (v) {
+      if (!_isEdit && (v == null || v.length < 4)) {
+        return 'Min 4 characters';
+      }
+      return null;
+    },
+  ),),
+ SizedBox(width: 12,),
+  Expanded(child:  Column(
+    mainAxisAlignment: MainAxisAlignment.start,
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        AppStrings.status,
+        style: TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: (ScreenUtil.width * 0.04).clamp(12.0, 14.0),
+          color: Colors.black87,
+        ),
+      ),
+      SizedBox(height: 12,),
+      GestureDetector(
+        onTap: () =>
+            setState(() => isActive = !isActive),
+        child: AnimatedContainer(
+          duration:
+          const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(
+              horizontal: 14, vertical: 7),
+          decoration: BoxDecoration(
+            color: isActive
+                ? Colors.green
+                .withValues(alpha: 0.1)
+                : Colors.red.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+                color: isActive
+                    ? Colors.green
+                    : Colors.red),
           ),
-          // InputField(
-          //   label: 'Password',
-          //   controller: passwordController,
-          //   hintText: 'Password',
-          //   enabled: true,
-          //   keyboardType: TextInputType.name,
-          //   showVisibilityToggle: true,
-          //   obscureText: true,
-          //   validator: (v) =>
-          //       v == null || v.length < 4 ? 'Min 4 characters' : null,
-          //   prexIcon: Icons.lock,
-          // ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isActive
+                    ? Icons.check_circle_outline
+                    : Icons.cancel_outlined,
+                size: 14,
+                color: isActive
+                    ? Colors.green
+                    : Colors.red,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                isActive ? 'Active' : 'Inactive',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: isActive
+                      ? Colors.green
+                      : Colors.red,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ],),),
+
+],),
+          // password
+
+
           const SizedBox(height: 16),
 
           // role dropdown
@@ -228,7 +286,7 @@ class _AddUserState extends State<AddUser> {
                       border: Border.all(
                         color: isSelected
                             ? AppColors.primaryColor
-                            : Colors.grey.withValues(alpha: 0.3),
+                            : Colors.black.withValues(alpha: 0.3),
                       ),
                     ),
                     child: Text(
@@ -241,7 +299,7 @@ class _AddUserState extends State<AddUser> {
                             : FontWeight.normal,
                         color: isSelected
                             ? AppColors.primaryColor
-                            : Colors.grey,
+                            : Colors.black,
                       ),
                     ),
                   ),
@@ -250,65 +308,7 @@ class _AddUserState extends State<AddUser> {
             }).toList(),
           ),
           const SizedBox(height: 16),
-        Row(
-          children: [
-          Text(
-            AppStrings.status,
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: (ScreenUtil.width * 0.04).clamp(12.0, 14.0),
-              color: Colors.black87,
-            ),
-          ),
-          SizedBox(width: 12,),
-          GestureDetector(
-            onTap: () =>
-                setState(() => isActive = !isActive),
-            child: AnimatedContainer(
-              duration:
-              const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 14, vertical: 7),
-              decoration: BoxDecoration(
-                color: isActive
-                    ? Colors.green
-                    .withValues(alpha: 0.1)
-                    : Colors.red.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                    color: isActive
-                        ? Colors.green
-                        : Colors.red),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    isActive
-                        ? Icons.check_circle_outline
-                        : Icons.cancel_outlined,
-                    size: 14,
-                    color: isActive
-                        ? Colors.green
-                        : Colors.red,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    isActive ? 'Active' : 'Inactive',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: isActive
-                          ? Colors.green
-                          : Colors.red,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],),
-          const SizedBox(height: 16),
+
           // go to login
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -327,7 +327,18 @@ class _AddUserState extends State<AddUser> {
                 child: ColorBtn(
                   text: isLoading ? AppStrings.saving : AppStrings.save,
                   btnColor: AppColors.secondaryColor,
-                  action: () {
+                  action: () async {
+                    if(!widget.isSetUp){
+                      final canAdd = await SubscriptionManager().canAddUser();
+                      if (!canAdd) {
+                        AppUtil.toastMessage(
+                          message: 'User limit reached (${SubscriptionManager().maxUsers}). Upgrade your plan.',
+                          context: context,
+                          backgroundColor: Colors.red,
+                        );
+                        return;
+                      }
+                    }
                     createUser();
                   },
                 ),

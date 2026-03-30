@@ -5,6 +5,8 @@ import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
 import "../../blocs/screens/home/bloc.dart";
 import "../../models/shared/transaction.dart";
+import "../../utils/sessionManager.dart";
+import "../../utils/shared/stock_monitor.dart";
 import "../components/screens/home/right_card.dart";
 import "../components/screens/home/transactions_list.dart";
 import "../components/screens/home/upper_card.dart";
@@ -24,9 +26,16 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     homeBloc = context.read<HomeBloc>();
     homeBloc.init(context: context);
+    disableStockNotificationForCashier();
     super.initState();
   }
-
+  Future<void>disableStockNotificationForCashier() async {
+    if(SessionManager().isCashier){
+      await StockMonitorService.setEnablePopupAlerts(
+        false,
+      );
+    }
+  }
   @override
   void dispose() {
     try {

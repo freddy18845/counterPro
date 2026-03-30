@@ -1,4 +1,3 @@
-
 import 'dart:io';
 import 'dart:ui';
 
@@ -21,7 +20,9 @@ final locator = GetIt.instance;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   if(Platform.isWindows){
+    // Must add this line
     await windowManager.ensureInitialized();
     Display primaryDisplay = await screenRetriever.getPrimaryDisplay();
 
@@ -30,9 +31,9 @@ Future<void> main() async {
     WindowOptions windowOptions = WindowOptions(
       size: screenSize,          // Set to the detected screen width/height
       center: true,
-      fullScreen: true,         // Set to true if you want to hide the dock/taskbar
+      fullScreen: false,         // Set to true if you want to hide the dock/taskbar
       backgroundColor: Colors.transparent,
-      skipTaskbar: true,
+      skipTaskbar: false,
       titleBarStyle: TitleBarStyle.normal,
     );
     windowManager.waitUntilReadyToShow(windowOptions, () async {
@@ -41,8 +42,15 @@ Future<void> main() async {
       await windowManager.maximize();
     });
   }
+
   try {
     await IsarService().init();
+    print('✅ Isar initialized');
+  } catch (e, st) {
+    print('❌ FATAL: Isar init failed: $e');
+    print(st);
+    return; // ✅ Don't proceed — nothing will work without DB
+
 
 
   } catch (e, stacktrace) {
@@ -98,3 +106,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
+
+// git remote set-url origin https://github.com/freddy18845/counterPro.git
+
+// git push -u origin main

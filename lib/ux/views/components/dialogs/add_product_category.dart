@@ -10,6 +10,7 @@ import "../../../res/app_colors.dart";
 import "../../../res/app_strings.dart";
 import "../../../utils/shared/screen.dart";
 import "../../../utils/shared/stock_monitor.dart";
+import "../../../utils/shared/subscriptionManger.dart";
 import "../shared/base_dailog.dart";
 import "../shared/login_input.dart";
 import "../shared/btn.dart";
@@ -90,7 +91,16 @@ class _AddEditProductDialogState extends State<AddEditProductDialog> {
     }
 
     setState(() => _isLoading = true);
-
+    final canAdd = await SubscriptionManager().canAddProduct();
+    if (!canAdd) {
+      AppUtil.toastMessage(
+        message: 'Product limit reached (${SubscriptionManager().maxProducts}). Upgrade your plan.',
+        context: context,
+        backgroundColor: Colors.red,
+      );
+      setState(() => _isLoading = false);
+      return;
+    }
     final product = _isEditMode ? widget.product! : Product();
 
     product
@@ -255,7 +265,7 @@ class _AddEditProductDialogState extends State<AddEditProductDialog> {
                 children: [
                   Expanded(
                     child: InputField(
-                      label: 'Cost Price',
+                      label: 'Cost Price Per One',
                       controller: _costPriceController,
                       hintText: '0.00',
                       prexIcon: Icons.money_off_outlined,
@@ -271,7 +281,7 @@ class _AddEditProductDialogState extends State<AddEditProductDialog> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: InputField(
-                      label: 'Selling Price',
+                      label: 'Selling Price Per One',
                       controller: _sellingPriceController,
                       hintText: '0.00',
                       prexIcon: Icons.attach_money,

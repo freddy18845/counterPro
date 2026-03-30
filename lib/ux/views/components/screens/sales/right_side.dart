@@ -18,6 +18,7 @@ import '../../../fragements/shared/short_dash_lines.dart';
 import '../../dialogs/payment_dailog.dart';
 import '../../shared/btn.dart';
 import '../../shared/cart_total_row.dart';
+import '../../shared/companylogo.dart';
 import '../../shared/inline_text.dart';
 import '../home/reciept_section.dart';
 
@@ -128,7 +129,6 @@ class _SalesCartSectionState extends State<SalesCartSection> {
   Future<void> _handleProceed(BuildContext context) async {
     if (widget.cart.isEmpty) return;
     widget.focusNode.unfocus();
-print("pushing  payment daliog");
     final result = await AppUtil.displayDialog(
       context: context,
       dismissible: false,
@@ -140,25 +140,19 @@ print("pushing  payment daliog");
         transactionId: txnId,
       ),
     );
-    print("done with   payment daliog");
+
     if (result == true && context.mounted) {
-      print("done getting the transaction");
       final isar = IsarService.db;
 
       final existingTransaction = await isar.posTransactions
           .filter()
           .transactionNumberEqualTo(txnId)
           .findFirst();
-      print(" transaction data ${existingTransaction?.id}");
       final existingOrder = await isar.saleOrders
           .filter()
           .orderNumberEqualTo(
           existingTransaction?.orderNumber ?? '')
           .findFirst();
-print("working oo ${existingOrder!.totalAmount.toString()}");
-print(existingOrder.status.toString());
-print(existingOrder.orderNumber.toString());
-print(existingOrder.id.toString());
       final data = TransactionData(
         tax: widget.tax,
         total: widget.total,
@@ -208,14 +202,8 @@ print(existingOrder.id.toString());
                   // logo
                   Center(
                     child: Padding(
-                      padding:
-                      const EdgeInsets.symmetric(vertical: 8),
-                      child: SvgPicture.asset(
-                        AppDrawables.darkLogoSVG,
-                        width: 100,
-                        height: 40,
-                        fit: BoxFit.fitWidth,
-                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: buildCompanyLogo(),
                     ),
                   ),
 

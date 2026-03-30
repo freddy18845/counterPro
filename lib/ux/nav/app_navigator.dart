@@ -15,7 +15,8 @@ import '../views/screens/login.dart';
 import '../views/screens/inventory.dart';
 import '../views/screens/sales.dart';
 import '../views/screens/saved_orders.dart';
-import '../views/screens/setUp.dart';
+import '../views/screens/register.dart';
+import '../views/screens/set_up.dart';
 import '../views/screens/transactions.dart';
 
 class AppNavigator {
@@ -28,6 +29,7 @@ class AppNavigator {
   static const String transaction = "transaction";
   static const String configSettings = "configSettings";
   static const String setUP = "setUp";
+  static const String register = "register";
   AppNavigator._();
 
   // Helper to merge blocs (kept your logic)
@@ -49,6 +51,7 @@ class AppNavigator {
     required String routId,
   }) async {
     final Widget child;
+
 
     if (newBlocs.isEmpty) {
       // No blocs needed → push screen directly (no MultiBlocProvider)
@@ -141,12 +144,20 @@ class AppNavigator {
     routId: transaction,
   );
 
+  static Future gotoRegistration({required BuildContext context}) => _pushNav(
+    context: context,
+    newBlocs: [
+      (context) => BlocProvider<SplashBloc>(create: (_) => SplashBloc()),
+    ],
+    screen: const RegisterScreen(),
+    routId: register,
+  );
   static Future gotoSetUp({required BuildContext context}) => _pushNav(
     context: context,
     newBlocs: [
       (context) => BlocProvider<SplashBloc>(create: (_) => SplashBloc()),
     ],
-    screen: const SetUPScreen(),
+    screen: const SetupChoiceScreen(),
     routId: setUP,
   );
 

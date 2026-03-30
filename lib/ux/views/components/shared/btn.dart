@@ -23,11 +23,12 @@ class Btn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDesktop = ScreenUtil.width >= 900;
     return  InkWell(
         onTap: isActive ? onTap : null,
         child:Container(
           width: double.infinity,
-          height:btnHeight ,
+          height:isDesktop ?btnHeight:(btnHeight-10) ,
           decoration: BoxDecoration(
             image:  DecorationImage(
               image: AssetImage(bgImage),

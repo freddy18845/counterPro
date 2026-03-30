@@ -2,6 +2,8 @@ import "package:flutter/cupertino.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
 import "../../../nav/app_navigator.dart";
 import "../../../utils/setup_checker.dart";
+import "../../../utils/shared/api_config.dart";
+import "../../../views/fragements/configSetting/sync_service.dart";
 
 
 part "event.dart";
@@ -16,26 +18,41 @@ class SplashBloc extends Bloc<SplashEvent, SplashState> {
 
         await Future.delayed(const Duration(milliseconds: 4000));
 
-        final isDone = await SetupChecker.isSetupDone(event.context);
-
-        if (!event.context.mounted) return;
-        bool isSubscriptionValid =
-            await SetupChecker.checkAndHandleSubscriptionStatus(event.context);
-        if (isDone) {
-        //  if (isSubscriptionValid) {
-            AppNavigator.gotoLogin(context: event.context);
-            return;
-          // }else{
-          //   emit(SplashErrorState(message: "Your subscription has expired.\n"
-          //       "Please contact support or visit our website to renew."));
-          // }
-        } else {
-          AppNavigator.gotoSetUp(context: event.context);
-        }
+        _checkAndRoute(event.context);
       } catch (e) {
         print('❌ SplashBloc error: $e');
         emit(SplashErrorState(message: '$e'));
       }
     });
+  }
+
+
+  // in your splash init handler
+  Future<void> _checkAndRoute(BuildContext context) async {
+    final isSetupDone = await SetupChecker.isSetupDone();
+
+    if (!isSetupDone) {
+      // ← go to choice screen not setup directly
+      AppNavigator.gotoSetUp(context: context);
+      return;
+    }
+
+    // setup done — check if sync needed on startup
+    final syncEnabled = await ApiConfig.isSyncEnabled();
+    if (syncEnabled) {
+      SyncService().syncAll(
+        pushLocal: true,
+        pullRemote: true,
+        context: context
+
+      ).then((r) {
+        debugPrint(
+          '🔄 Startup sync: '
+              'pushed=${r.pushed} pulled=${r.pulled}',
+        );
+      });
+    }
+
+    AppNavigator.gotoLogin(context: context);
   }
 }
