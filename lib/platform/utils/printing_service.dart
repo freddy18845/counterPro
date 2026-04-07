@@ -1,8 +1,7 @@
-
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:esc_pos_utils/esc_pos_utils.dart';
-import 'package:eswaini_destop_app/platform/utils/constant.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:usb_serial/usb_serial.dart';
@@ -14,6 +13,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../ux/models/shared/sale_order.dart';
 import '../../ux/models/shared/pos_transaction.dart';
 import '../../ux/utils/sessionManager.dart';
+import 'dart:io';
+
+import 'constant.dart';
 
 class PrinterManager {
   // ── Singleton ─────────────────────────────────────────────
@@ -21,10 +23,14 @@ class PrinterManager {
   factory PrinterManager() => _instance;
   PrinterManager._internal();
 
+  // Platform channel for Windows USB printing
+  static const MethodChannel _windowsUsbChannel = MethodChannel('usb_printer_windows');
+
   UsbPort? _usbPort;
   final BluetoothPrint _bluetooth = BluetoothPrint.instance;
   bool _bluetoothConnected = false;
   String _connectionType = ''; // 'usb' or 'bluetooth'
+  String? _windowsPrinterName;
 
   // saved printer address for auto-reconnect
   static const _prefKey = 'saved_printer_address';
@@ -41,6 +47,24 @@ class PrinterManager {
   // ─────────────────────────────────────────────────────────
   Future<bool> connectUSB() async {
     try {
+      // 🪟 WINDOWS
+      if (Platform.isWindows) {
+        final printers = await _getUSBPrinters();
+
+        if (printers.isEmpty) {
+          debugPrint('❌ No USB printers found (Windows)');
+          return false;
+        }
+
+        // pick first printer (you can improve UI later)
+        _windowsPrinterName = printers.first;
+
+        _connectionType = 'usb';
+        debugPrint('✅ Windows USB connected: $_windowsPrinterName');
+        return true;
+      }
+
+      // 📱 ANDROID
       final devices = await UsbSerial.listDevices();
 
       if (devices.isEmpty) {
@@ -65,10 +89,36 @@ class PrinterManager {
       );
 
       _connectionType = 'usb';
-      debugPrint('✅ USB connected');
+      debugPrint('✅ Android USB connected');
       return true;
+
     } catch (e) {
       debugPrint('❌ USB connect error: $e');
+      return false;
+    }
+  }
+
+  // Get list of USB printers on Windows
+  Future<List<String>> _getUSBPrinters() async {
+    try {
+      final List<dynamic> result = await _windowsUsbChannel.invokeMethod('getPrinters');
+      return result.cast<String>();
+    } catch (e) {
+      debugPrint('Failed to get printers: $e');
+      return [];
+    }
+  }
+
+  // Print raw bytes on Windows
+  Future<bool> _printWindowsRawData(String printerName, List<int> data) async {
+    try {
+      final bool result = await _windowsUsbChannel.invokeMethod('printBytes', {
+        'printerName': printerName,
+        'bytes': data,
+      });
+      return result;
+    } catch (e) {
+      debugPrint('Windows print error: $e');
       return false;
     }
   }
@@ -766,7 +816,19 @@ class PrinterManager {
         transaction: transaction,
         isDuplicate: isDuplicate,
       );
-      await _usbPort?.write(Uint8List.fromList(bytes));
+
+      // 🪟 WINDOWS
+      if (Platform.isWindows) {
+        if (_windowsPrinterName == null) {
+          throw Exception('No Windows USB printer selected');
+        }
+
+        await _printWindowsRawData(_windowsPrinterName!, bytes);
+      }
+      // 📱 ANDROID
+      else {
+        await _usbPort?.write(Uint8List.fromList(bytes));
+      }
     } else if (_connectionType == 'bluetooth' &&
         _bluetoothConnected) {
       final data = _buildBluetoothReceipt(
@@ -807,7 +869,19 @@ class PrinterManager {
         totalOrders: totalOrders,
         totalItems: totalItems,
       );
-      await _usbPort?.write(Uint8List.fromList(bytes));
+
+      // 🪟 WINDOWS
+      if (Platform.isWindows) {
+        if (_windowsPrinterName == null) {
+          throw Exception('No Windows USB printer selected');
+        }
+
+        await _printWindowsRawData(_windowsPrinterName!, bytes);
+      }
+      // 📱 ANDROID
+      else {
+        await _usbPort?.write(Uint8List.fromList(bytes));
+      }
     } else if (_connectionType == 'bluetooth' &&
         _bluetoothConnected) {
       // bluetooth report

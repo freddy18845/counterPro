@@ -20,7 +20,7 @@ class ConstantUtil {
   static const double maxWidthBtnAppBar = 250;
   static const double maxWidthAllowed = 1366.0;
   static double maxHeightAllowed = (ScreenUtil.height * 0.07);
-  static const double maxHeightAppBar = 60.0;
+  static const double maxHeightAppBar = 55.0;
   static const double mixHeightBtn = 58;
   static const double btnBottomPadding = 40;
   static const double dropDownItem = 60;

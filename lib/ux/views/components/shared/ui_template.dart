@@ -189,7 +189,8 @@ class _BaseTemplateState extends State<BaseTemplate> with WindowListener {
         extendBodyBehindAppBar: true,
         appBar: ScreenUtil.width >= 900 ? CustomHeaderBar() : null,
         bottomNavigationBar: const BranchInfo(),
-        body: Container(
+        body: 
+        Container(
           height: double.infinity,
           width: double.infinity,
           decoration: const BoxDecoration(

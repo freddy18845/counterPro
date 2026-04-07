@@ -128,7 +128,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       ),
                     ),
-                    ScreenUtil.width >=900? Spacer(): SizedBox(height:16 ,),
+                    ScreenUtil.width >=900? SizedBox(height:60 ): SizedBox(height:40 ,),
 
                     BlocBuilder<LoginBloc, LoginState>(
                         builder: (context, LoginState state) {
