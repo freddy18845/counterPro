@@ -152,8 +152,7 @@ class _SalesScreenState extends State<SalesScreen> {
          SalesLeftSection(
            title: widget.selectedTransaction.text,
 
-           allProducts: _allProducts,
-           filteredProducts: _filteredProducts,
+           allProducts: _filteredProducts.isNotEmpty?_filteredProducts:_allProducts,
            categories: _categories,
            selectedCategory: _selectedCategory,
            searchController: _searchController,

@@ -86,6 +86,7 @@ class ConfigField extends StatelessWidget {
   final bool obscureText;
   final bool showVisibilityToggle;
   final VoidCallback? onToggleVisibility;
+  final TextInputAction? textInputAction;
   final TextInputType? keyboardType;
   final Function(String)? onChanged;
   final Function(String)? onSubmitted;
@@ -94,6 +95,7 @@ class ConfigField extends StatelessWidget {
     super.key,
     required this.controller,
     required this.hintText,
+    this.textInputAction,
     this.validator,
     this.enabled = true,
     this.obscureText = false,
@@ -125,6 +127,7 @@ class ConfigField extends StatelessWidget {
       enabled: enabled,
       obscureText: obscureText,
       keyboardType: keyboardType,
+          textInputAction: textInputAction,
           onChanged: onChanged,
           onFieldSubmitted: onSubmitted,
       cursorColor: AppColors.primaryColor,

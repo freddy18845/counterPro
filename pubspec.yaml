@@ -45,6 +45,9 @@ dependencies:
   crclib: ^3.0.0
 #  sunmi_printer_plus: ^4.1.0
   dropdown_button2: ^2.3.9
+  mobile_scanner: ^3.5.0
+  flutter_barcode_listener: ^0.1.4
+  responsive_builder: ^0.7.0
   flutter_bloc: ^9.1.1
   get_it: ^8.2.0
   dotted_border: ^2.1.0

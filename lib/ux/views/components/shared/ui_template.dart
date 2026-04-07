@@ -1,8 +1,9 @@
 import 'dart:io';
 import 'dart:ui';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:responsive_builder/responsive_builder.dart';
 import 'package:window_manager/window_manager.dart';
+
 import '../../../../platform/utils/constant.dart';
 import '../../../res/app_drawables.dart';
 import '../../../utils/shared/api_config.dart';
@@ -16,6 +17,7 @@ class BaseTemplate extends StatefulWidget {
   final bool isProcessing;
   final bool isHomeScreen;
   final Widget contentSection;
+
   const BaseTemplate({
     super.key,
     required this.contentSection,
@@ -31,48 +33,30 @@ class _BaseTemplateState extends State<BaseTemplate> with WindowListener {
   bool _isMinimized = false;
   bool _isMaximized = false;
   bool syncEnabled = false;
-  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   @override
   void initState() {
     super.initState();
     checkAuto();
-    // Only add window listener on Windows platform
+
     if (Platform.isWindows) {
       windowManager.addListener(this);
       _checkWindowStates();
     }
-
-
-    // Only set this after context exists
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-
-      // Use the global navigator key from main.dart
-      // You need to import main.dart or access it through a global variable
-      if (navigatorKey.currentContext != null) {
-        StockMonitorService.setGlobalContext(navigatorKey.currentContext!);
-      } else {
-        // Fallback to the current context if navigatorKey is not available
-        if (mounted) {
-          StockMonitorService.setGlobalContext(context);
-        }
-      }
-    });
   }
+
   Future<void> checkAuto() async {
     final value = await ApiConfig.isSyncEnabled();
     if (mounted) {
-      setState(() {
-        syncEnabled = value;
-      });
+      setState(() => syncEnabled = value);
     }
   }
 
   Future<void> _checkWindowStates() async {
+    if (!Platform.isWindows) return;
     try {
       final isMinimized = await windowManager.isMinimized();
       final isMaximized = await windowManager.isMaximized();
-
       if (mounted) {
         setState(() {
           _isMinimized = isMinimized;
@@ -86,157 +70,104 @@ class _BaseTemplateState extends State<BaseTemplate> with WindowListener {
 
   @override
   void dispose() {
-    // Only remove window listener on Windows platform
     if (Platform.isWindows) {
       windowManager.removeListener(this);
     }
     super.dispose();
   }
 
-  // WindowListener callbacks - only called on Windows
+  // Window Listener Callbacks (Windows only)
   @override
-  void onWindowMinimize() {
-    if (Platform.isWindows) {
-      print('Window minimized - rebuilding UI');
-      if (mounted) {
-        setState(() {
-          _isMinimized = true;
-        });
-      }
-    }
-  }
-
+  void onWindowMinimize() => _updateWindowState(minimized: true);
   @override
-  void onWindowRestore() {
-    if (Platform.isWindows) {
-      print('Window restored - rebuilding UI');
-      if (mounted) {
-        setState(() {
-          _isMinimized = false;
-        });
-      }
-    }
-  }
-
+  void onWindowRestore() => _updateWindowState(minimized: false);
   @override
-  void onWindowMaximize() {
-    if (Platform.isWindows) {
-      print('Window maximized - rebuilding UI');
-      if (mounted) {
-        setState(() {
-          _isMaximized = true;
-        });
-      }
-    }
-  }
-
-
-
+  void onWindowMaximize() => _updateWindowState(maximized: true);
   @override
-  void onWindowUnmaximize() {
-    if (Platform.isWindows) {
-      print('Window unmaximized - rebuilding UI');
-      if (mounted) {
-        setState(() {
-          _isMaximized = false;
-        });
-      }
-    }
-  }
+  void onWindowUnmaximize() => _updateWindowState(maximized: false);
 
-  @override
-  void onWindowFocus() {
-    if (Platform.isWindows) {
-      print('Window focused');
-      // Optional: Trigger rebuild when window gets focus
-      if (mounted) {
-        setState(() {
-          // Force rebuild on focus if needed
-        });
-      }
-    }
-  }
-
-  @override
-  void onWindowBlur() {
-    if (Platform.isWindows) {
-      print('Window lost focus');
-      // Optional: Handle blur if needed
-    }
-  }
-
-  @override
-  void onWindowClose() async {
-    if (Platform.isWindows) {
-      print('Window closing');
-      // Handle window close - you might want to show a confirmation dialog
-      // await windowManager.destroy();
+  void _updateWindowState({bool? minimized, bool? maximized}) {
+    if (mounted) {
+      setState(() {
+        if (minimized != null) _isMinimized = minimized;
+        if (maximized != null) _isMaximized = maximized;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Debug: Print current window state on build (Windows only)
-    if (Platform.isWindows) {
-      print('Building BaseTemplate - Minimized: $_isMinimized, Maximized: $_isMaximized');
-    }
+    return ResponsiveBuilder(
+      builder: (context, sizingInformation) {
+        final isDesktop = sizingInformation.deviceScreenType == DeviceScreenType.desktop ||
+            ScreenUtil.width >= 900;
 
-    return PopScope(
-      canPop: false,
-      child: Scaffold(
-        resizeToAvoidBottomInset: false,
-        extendBody: true,
-        extendBodyBehindAppBar: true,
-        appBar: ScreenUtil.width >= 900 ? CustomHeaderBar() : null,
-        bottomNavigationBar: const BranchInfo(),
-        body: 
-        Container(
-          height: double.infinity,
-          width: double.infinity,
-          decoration: const BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage(AppDrawables.loadingScreen),
-              fit: BoxFit.fill,
-            ),
-          ),
-          child: ClipRect(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 3.0, sigmaY: 3.0),
-              child: Align(
-                alignment: Alignment.center,
-                child: Container(
-                  padding: EdgeInsets.only(
-                    top: ConstantUtil.verticalSpacing,
-                    left: ConstantUtil.horizontalSpacing,
-                    right: ConstantUtil.horizontalSpacing,
-                  ),
-                  child: Column(
-                    children: [
-                      SizedBox(height: ScreenUtil.width >= 900 ? 60 : 8),
-                      SummaryData(
-                        syncEnabled: syncEnabled,
-                        isProcessing: widget.isProcessing,
-                        isHomeScreen: widget.isHomeScreen,
-                        onSyncChanged: (value) async {
-                          setState(() {
-                            syncEnabled = value;
-                          });
+        final isTablet = sizingInformation.deviceScreenType == DeviceScreenType.tablet;
+        final isMobile = sizingInformation.deviceScreenType == DeviceScreenType.mobile;
 
-                          await ApiConfig.setSyncEnabled(value);
-                        },
+        return PopScope(
+          canPop: false,
+          child: Scaffold(
+            resizeToAvoidBottomInset: false,
+            extendBody: true,
+            extendBodyBehindAppBar: true,
+            appBar: isDesktop ? CustomHeaderBar() : null,
+            bottomNavigationBar: isMobile ? const BranchInfo() : null,
+            body: Container(
+              height: double.infinity,
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage(AppDrawables.loadingScreen),
+                  fit: BoxFit.fill,
+                ),
+              ),
+              child: ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 3.0, sigmaY: 3.0),
+                  child: Align(
+                    alignment: Alignment.center,
+                    child: Container(
+                      padding: EdgeInsets.only(
+                        top: isDesktop ? ConstantUtil.verticalSpacing : 12,
+                        left: isDesktop ? ConstantUtil.horizontalSpacing : 8,
+                        right: isDesktop ? ConstantUtil.horizontalSpacing : 8,
                       ),
-                      SizedBox(
-                        height: ScreenUtil.height * 0.76,
-                        child: widget.contentSection,
+                      child: Column(
+                        children: [
+                          // Top spacing
+                          SizedBox(height: isDesktop ? 60 : (isTablet ? 40 : 20)),
+
+                          // Summary Data
+                          SummaryData(
+                            syncEnabled: syncEnabled,
+                            isProcessing: widget.isProcessing,
+                            isHomeScreen: widget.isHomeScreen,
+                            onSyncChanged: (value) async {
+                              setState(() => syncEnabled = value);
+                              await ApiConfig.setSyncEnabled(value);
+                            },
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          // Main Content Area
+                          Expanded(
+                            child: widget.contentSection,
+                          ),
+
+                          // Show BranchInfo at bottom for tablet & desktop if needed
+                          if (!isMobile) const BranchInfo(),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

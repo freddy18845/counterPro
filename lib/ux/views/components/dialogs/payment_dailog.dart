@@ -180,7 +180,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
         title: 'Select Payment Method',
         showCard: true,
         titleSize: 14,
-        cardHeight: 420,
+        cardHeight: 480,
         cardWidth: 460,
         onClose: () => Navigator.pop(context),
         child: Column(

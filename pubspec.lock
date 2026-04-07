@@ -422,6 +422,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.5.2"
+  flutter_barcode_listener:
+    dependency: "direct main"
+    description:
+      name: flutter_barcode_listener
+      sha256: "095b04a29ddab58c623f3a78d88c641b870a6d4bc4bdf0c7a0d4bc58e337aed8"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.4"
   flutter_bloc:
     dependency: "direct main"
     description:
@@ -856,6 +864,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.0"
+  mobile_scanner:
+    dependency: "direct main"
+    description:
+      name: mobile_scanner
+      sha256: "1b60b8f9d4ce0cb0e7d7bc223c955d083a0737bee66fa1fcfe5de48225e0d5b3"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.5.7"
   nested:
     dependency: transitive
     description:
@@ -1040,6 +1056,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.1.0"
+  responsive_builder:
+    dependency: "direct main"
+    description:
+      name: responsive_builder
+      sha256: "64a5ef3fbe3628e4588a0c2391c3186300e76f58621d8135cc77aac816255a3e"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.7.1"
   rxdart:
     dependency: transitive
     description:

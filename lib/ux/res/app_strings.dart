@@ -72,6 +72,7 @@ class AppStrings {
   static const String cancel = "Cancel";
   static const String clear = "Clear Cart";
   static const String yes = "Yes";
+  static const String useBluetooth = "Use Bluetooth";
   static const String no = "No";
 
   static const String pay = "Pay";

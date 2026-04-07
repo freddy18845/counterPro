@@ -11,7 +11,6 @@ import '../../shared/login_input.dart';
 
 class SalesLeftSection extends StatefulWidget {
   final List<Product> allProducts;
-  final List<Product> filteredProducts;
   final List<Category> categories;
   final Category? selectedCategory;
   final TextEditingController searchController;
@@ -24,7 +23,6 @@ class SalesLeftSection extends StatefulWidget {
   const SalesLeftSection({
     super.key,
     required this.allProducts,
-    required this.filteredProducts,
     required this.categories,
     required this.selectedCategory,
     required this.searchController,
@@ -42,45 +40,62 @@ class SalesLeftSection extends StatefulWidget {
 class _SalesLeftSectionState extends State<SalesLeftSection> {
   final bool isDesktop = ScreenUtil.width >= 900;
 
+  // Local filtered list based on search + category
+  List<Product> get _displayedProducts {
+    final query = widget.searchController.text.trim().toLowerCase();
+    final categoryId = widget.selectedCategory?.id;
+
+    return widget.allProducts.where((p) {
+      final matchesCategory = categoryId == null || p.categoryId == categoryId;
+      if (query.isEmpty) return matchesCategory;
+
+      return matchesCategory &&
+          ((p.name.toLowerCase().contains(query)) ||
+              (p.sku?.toLowerCase().contains(query) ?? false) ||
+              (p.barcodeId?.trim().toLowerCase() == query));
+    }).toList();
+  }
+
   void handleScan(String scannedValue) {
     if (scannedValue.trim().isEmpty) return;
 
-    final cleanValue = scannedValue.trim();
-
-    // Find the first matching product (barcode > SKU > name)
+    final cleanValue = scannedValue.trim().toLowerCase();
     Product? foundProduct;
 
     for (final p in widget.allProducts) {
-      if ((p.barcodeId != null && p.barcodeId!.trim() == cleanValue) ||
-          (p.sku != null && p.sku.trim().toLowerCase() == cleanValue.toLowerCase()) ||
-          p.name.trim().toLowerCase() == cleanValue.toLowerCase()) {
+      if ((p.barcodeId?.trim().toLowerCase() == cleanValue) ||
+          (p.sku?.trim().toLowerCase() == cleanValue) ||
+          p.name.trim().toLowerCase() == cleanValue) {
         foundProduct = p;
-        break; // Stop at the first match for better performance
+        break;
       }
     }
 
     if (foundProduct != null) {
       widget.onAddToCart(foundProduct);
-      AppUtil.toastMessage(message: 'Product Added!', context: context, );
+      AppUtil.toastMessage(message: '✅ Product Added!', context: context);
     } else {
-      AppUtil.toastMessage(message: 'No product found for "$scannedValue"', context: context, backgroundColor: Colors.orange,);
-      // Optional feedback for user
-
+      AppUtil.toastMessage(
+        message: '❌ No product found for "$scannedValue"',
+        context: context,
+        backgroundColor: Colors.orange,
+      );
     }
 
-    // Critical for barcode scanner: clear and keep focus ready for next scan
     widget.searchController.clear();
     widget.focusNode.requestFocus();
   }
 
   @override
   void dispose() {
-    widget.focusNode.dispose();
+    // Do NOT dispose focusNode here if it's passed from parent
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final displayed = _displayedProducts;
+
     return Expanded(
       flex: 3,
       child: CustomCard(
@@ -88,10 +103,7 @@ class _SalesLeftSectionState extends State<SalesLeftSection> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(height: ConstantUtil.verticalSpacing / 4),
-
-            // ✅ FIXED
             InlineText(title: widget.title.toUpperCase()),
-
             SizedBox(height: ConstantUtil.verticalSpacing / 4),
 
             /// 🔍 SEARCH + CATEGORY
@@ -101,74 +113,50 @@ class _SalesLeftSectionState extends State<SalesLeftSection> {
                   child: Stack(
                     children: [
                       Focus(
-                        onKeyEvent: (node, event) => KeyEventResult.ignored,
+                        onKeyEvent: (_, __) => KeyEventResult.ignored,
                         child: ConfigField(
                           controller: widget.searchController,
-                          hintText: 'Search by name, SKU or barcode...',
+                          hintText: 'Search by name, SKU or scan barcode...',
                           enabled: true,
                           focusNode: widget.focusNode,
                           keyboardType: TextInputType.text,
                           onSubmitted: handleScan,
+                          onChanged: (_) => setState(() {}),
                         ),
                       ),
 
-                      /// 🔽 SUGGESTIONS
+                      /// 🔽 Live Suggestions
                       if (widget.showSuggestions &&
-                          widget.filteredProducts.isNotEmpty)
+                          widget.searchController.text.trim().isNotEmpty &&
+                          displayed.isNotEmpty)
                         Positioned(
-                          top: 50,
+                          top: 52,
                           left: 0,
                           right: 0,
                           child: Material(
                             elevation: 8,
                             borderRadius: BorderRadius.circular(8),
                             child: Container(
-                              constraints: const BoxConstraints(maxHeight: 220),
+                              constraints: const BoxConstraints(maxHeight: 240),
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: Colors.grey.withOpacity(0.2),
-                                ),
+                                border: Border.all(color: Colors.grey.withOpacity(0.2)),
                               ),
                               child: ListView.separated(
                                 shrinkWrap: true,
-                                itemCount: widget.filteredProducts.length,
-                                addRepaintBoundaries: true,   // ← isolates repaints
-                                addAutomaticKeepAlives: false, // ← don't keep off-screen items alive
-                                cacheExtent: 200,
-                                separatorBuilder: (_, __) => Divider(
-                                  height: 1,
-                                  color: Colors.grey.withOpacity(0.15),
-                                ),
+                                itemCount: displayed.length > 8 ? 8 : displayed.length,
+                                separatorBuilder: (_, __) => Divider(height: 1),
                                 itemBuilder: (context, index) {
-                                  final p = widget.filteredProducts[index];
+                                  final p = displayed[index];
                                   return ListTile(
                                     dense: true,
-                                    title: Text(
-                                      p.name,
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    subtitle: Text(
-                                      '${p.sku} · Stock: ${p.stockQuantity}',
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
+                                    title: Text(p.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                                    subtitle: Text('${p.sku} • Stock: ${p.stockQuantity}'),
                                     trailing: Text(
                                       '${ConstantUtil.currencySymbol} ${p.sellingPrice.toStringAsFixed(2)}',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.primaryColor,
-                                      ),
+                                      style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primaryColor),
                                     ),
-
-                                    // ✅ FIXED
                                     onTap: () {
                                       widget.onAddToCart(p);
                                       widget.focusNode.requestFocus();
@@ -183,167 +171,107 @@ class _SalesLeftSectionState extends State<SalesLeftSection> {
                   ),
                 ),
 
-                SizedBox(width: ScreenUtil.width * 0.01),
+                const SizedBox(width: 8),
 
-                /// 🧩 CATEGORY FILTER
+                /// Category Filter
                 SizedBox(
                   width: (ScreenUtil.width * 0.12).clamp(120, 200),
                   child: DropdownButtonFormField<Category?>(
                     value: widget.selectedCategory,
                     decoration: InputDecoration(
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                       isDense: true,
                     ),
-                    hint: const Text(
-                      'Category',
-                      style: TextStyle(fontSize: 12),
-                    ),
+                    hint: const Text('Category', style: TextStyle(fontSize: 12)),
                     items: [
-                      const DropdownMenuItem(
-                        value: null,
-                        child: Text('All', style: TextStyle(fontSize: 12)),
-                      ),
-
-                      // ✅ FIXED (_categories → categories)
+                      const DropdownMenuItem(value: null, child: Text('All')),
                       ...widget.categories.map(
-                        (c) => DropdownMenuItem(
-                          value: c,
-                          child: Text(
-                            c.name,
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                        ),
+                            (c) => DropdownMenuItem(value: c, child: Text(c.name)),
                       ),
                     ],
-
-                    // ✅ FIXED (no setState here)
                     onChanged: widget.onCategoryChanged,
                   ),
                 ),
               ],
             ),
 
-            SizedBox(height: ConstantUtil.verticalSpacing / 2),
+            const SizedBox(height: 12),
+            const Divider(thickness: 1.5, color: AppColors.secondaryColor),
 
-            Divider(thickness: 1.5, color: AppColors.secondaryColor),
-
-            /// 🧱 PRODUCT GRID
+            /// 🧱 PRODUCT GRID (Now filtered by search + category)
             Expanded(
-              child: widget.allProducts.isEmpty
-                  ? const Center(child: Text('No products available'))
+              child: displayed.isEmpty
+                  ? const Center(
+                child: Text(
+                  'No products found',
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              )
                   : GridView.builder(
-                      padding: const EdgeInsets.symmetric(vertical: 2),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: isDesktop ? 4 : 3,
-                        mainAxisSpacing: 10,
-                        crossAxisSpacing: 10,
-                        childAspectRatio: 1.30,
-                      ),
-                      itemCount: widget.selectedCategory == null
-                          ? widget.allProducts.length
-                          : widget.allProducts
-                                .where(
-                                  (p) =>
-                                      p.categoryId ==
-                                      widget.selectedCategory!.id,
-                                )
-                                .length,
-                      itemBuilder: (context, index) {
-                        final list = widget.selectedCategory == null
-                            ? widget.allProducts
-                            : widget.allProducts
-                                  .where(
-                                    (p) =>
-                                        p.categoryId ==
-                                        widget.selectedCategory!.id,
-                                  )
-                                  .toList();
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: isDesktop ? 4 : 3,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 1.25,
+                ),
+                itemCount: displayed.length,
+                itemBuilder: (context, index) {
+                  final p = displayed[index];
+                  final outOfStock = p.stockQuantity <= 0;
 
-                        final p = list[index];
-                        final outOfStock = p.stockQuantity <= 0;
-
-                        return GestureDetector(
-                          onTap: outOfStock
-                              ? null
-                              : () {
-                                  FocusScope.of(context).unfocus();
-                                  widget.onAddToCart(p);
-                                }, // ✅ FIXED
-                          child:RepaintBoundary(
-                            child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: outOfStock
-                                  ? Colors.grey.withOpacity(0.1)
-                                  : Colors.white,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: outOfStock
-                                    ? Colors.grey.withOpacity(0.2)
-                                    : AppColors.primaryColor.withOpacity(0.3),
-                              ),
+                  return GestureDetector(
+                    onTap: outOfStock
+                        ? null
+                        : () {
+                      FocusScope.of(context).unfocus();
+                      widget.onAddToCart(p);
+                    },
+                    child: RepaintBoundary(
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: outOfStock ? Colors.grey.withOpacity(0.1) : Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: outOfStock
+                                ? Colors.grey.withOpacity(0.3)
+                                : AppColors.primaryColor.withOpacity(0.3),
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.inventory_2_outlined,
+                              size: 32,
+                              color: outOfStock ? Colors.grey : AppColors.primaryColor,
                             ),
-                            child: isDesktop
-                                ? Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      isDesktop
-                                          ? Icon(
-                                              Icons.inventory_2_outlined,
-                                              color: outOfStock
-                                                  ? Colors.grey
-                                                  : AppColors.primaryColor,
-                                            )
-                                          : SizedBox(),
-                                      SizedBox(height: isDesktop ? 8 : 0),
-                                      Text(
-                                        p.name,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        textAlign: TextAlign.center,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        '${ConstantUtil.currencySymbol} ${p.sellingPrice.toStringAsFixed(2)}',
-                                      ),
-                                    ],
-                                  )
-                                : Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.inventory_2_outlined,
-                                        color: outOfStock
-                                            ? Colors.grey
-                                            : AppColors.primaryColor,
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        p.name,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        textAlign: TextAlign.center,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        '${ConstantUtil.currencySymbol} ${p.sellingPrice.toStringAsFixed(2)}',
-                                      ),
-                                    ],
-                                  ),
-                          )),
-                        );
-                      },
+                            const SizedBox(height: 8),
+                            Text(
+                              p.name,
+                              maxLines: 2,
+                              textAlign: TextAlign.center,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontWeight: FontWeight.w500),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              '${ConstantUtil.currencySymbol} ${p.sellingPrice.toStringAsFixed(2)}',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
+                  );
+                },
+              ),
             ),
 
-            Divider(thickness: 1.5, color: AppColors.secondaryColor),
+            const Divider(thickness: 1.5, color: AppColors.secondaryColor),
           ],
         ),
       ),
