@@ -1,11 +1,12 @@
 import 'dart:io';
 import 'dart:ui';
-
 import 'package:eswaini_destop_app/platform/utils/isar_manager.dart';
 import 'package:eswaini_destop_app/ux/blocs/screens/splash/bloc.dart';
 import 'package:eswaini_destop_app/ux/res/app_colors.dart';
 import 'package:eswaini_destop_app/ux/res/app_strings.dart';
 import 'package:eswaini_destop_app/ux/utils/shared/stock_monitor.dart';
+import 'package:eswaini_destop_app/ux/utils/shared/subscriptionManger.dart';
+import 'package:eswaini_destop_app/ux/utils/shared/tax_manager.dart';
 import 'package:eswaini_destop_app/ux/views/screens/splash.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -20,6 +21,9 @@ final locator = GetIt.instance;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  PaintingBinding.instance.imageCache.maximumSize = 50;
+  PaintingBinding.instance.imageCache.maximumSizeBytes =
+      20 * 1024 * 1024;
 
   if(Platform.isWindows){
     // Must add this line
@@ -43,23 +47,13 @@ Future<void> main() async {
     });
   }
 
+
   try {
+
     await IsarService().init();
-    print('✅ Isar initialized');
-  } catch (e, st) {
-    print('❌ FATAL: Isar init failed: $e');
-    print(st);
-    return; // ✅ Don't proceed — nothing will work without DB
-
-
-
-  } catch (e, stacktrace) {
-
-    print(stacktrace);
-  }
-
-  try {
     await StockMonitorService.init();
+    await TaxManager().load();
+   // await SubscriptionManager().load();
     StockMonitorService.startMonitoring();
     print("✅ Stock monitor initialized");
   } catch (e, stacktrace) {

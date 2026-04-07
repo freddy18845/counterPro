@@ -17,7 +17,7 @@ class Company {
 
   // ← subscription fields
   @Enumerated(EnumType.name)
-  SubscriptionPlan subscriptionPlan = SubscriptionPlan.basic;
+  SubscriptionPlan subscriptionPlan = SubscriptionPlan.enterprise;
 
   @Enumerated(EnumType.name)
   SubscriptionStatus subscriptionStatus = SubscriptionStatus.active;

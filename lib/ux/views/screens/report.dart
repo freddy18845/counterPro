@@ -398,7 +398,8 @@ class _ReportScreenState extends State<ReportScreen> {
                         _loadData(); // ← load real data
                       }
                     },
-                    child: AnimatedContainer(
+                    child:RepaintBoundary(
+                      child: AnimatedContainer(
                       duration:
                       const Duration(milliseconds: 200),
                       margin: const EdgeInsets.only(left: 6),
@@ -427,7 +428,7 @@ class _ReportScreenState extends State<ReportScreen> {
                               : Colors.grey,
                         ),
                       ),
-                    ),
+                    )),
                   );
                 }),
 
@@ -464,7 +465,8 @@ class _ReportScreenState extends State<ReportScreen> {
                 // refresh button
                 GestureDetector(
                   onTap: _isLoading ? null : _loadData,
-                  child: AnimatedContainer(
+                  child: RepaintBoundary(
+                      child:AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     padding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 7),
@@ -492,7 +494,7 @@ class _ReportScreenState extends State<ReportScreen> {
                       size: 16,
                       color: AppColors.primaryColor,
                     ),
-                  ),
+                  )),
                 ),
 
                 if (_isExporting)
@@ -730,9 +732,10 @@ class _ReportScreenState extends State<ReportScreen> {
                                     height: 16),
                                 SizedBox(
                                   height: 160,
-                                  child: BarChart(
+                                  child:RepaintBoundary(
+                                    child: BarChart(
                                       data: _dailySales),
-                                ),
+                                  ) ),
                               ],
                             ),
                           ),

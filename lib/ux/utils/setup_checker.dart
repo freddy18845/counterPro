@@ -29,4 +29,8 @@ class SetupChecker {
         .findFirst();
     return user?.passwordHash == 'changeme123';
   }
+
+
+
 }
+

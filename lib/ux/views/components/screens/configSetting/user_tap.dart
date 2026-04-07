@@ -98,6 +98,9 @@ class UsersTabState extends State<UsersTab> {
                   child: ListView.builder(
                     padding: EdgeInsets.zero,
                     itemCount: _users.length,
+                    addRepaintBoundaries: true,   // ← isolates repaints
+                    addAutomaticKeepAlives: false, // ← don't keep off-screen items alive
+                    cacheExtent: 200,
                     itemBuilder: (context, index) {
                       final u = _users[index];
                       return UserRow(

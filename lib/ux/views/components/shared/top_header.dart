@@ -139,10 +139,11 @@ final sessionManager = SessionManager();
                           fit: BoxFit.fill,
                         ),
                       ),
-                      child: SvgPicture.asset(
+                      child:RepaintBoundary(
+                        child: SvgPicture.asset(
                         AppDrawables.darkLogoSVG,
                         fit: BoxFit.fill,
-                      ),
+                        )  ),
                     ),
                   ),
 

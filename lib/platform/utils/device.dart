@@ -1,7 +1,6 @@
 
 import "package:bluetooth_print/bluetooth_print_model.dart";
 
-
 class PrinterDBluetoothDevice extends BluetoothDevice {
   PrinterDBluetoothDevice({required String name, required String address})
       : super(name: name, address: address);

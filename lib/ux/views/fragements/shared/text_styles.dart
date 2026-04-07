@@ -20,7 +20,8 @@ Widget iconText({required String icon, required String title}) {
 Widget iconTitleAndText({required String icon, required String title,required  String text}) {
   return Row(
     children: [
-      SvgPicture.asset(icon, height: 14, fit: BoxFit.fill),
+  RepaintBoundary(
+  child:  SvgPicture.asset(icon, height: 14, fit: BoxFit.fill),),
 
       const SizedBox(width: 6),
       Text(title, style: AppTheme.getTextStyle(bold: true,size: (ScreenUtil.height * 0.02).clamp(9, 12))),

@@ -48,7 +48,7 @@ class SessionManager {
   Future<void> save(PosUser user , BuildContext context) async {
     _currentUser = user;
     await _loadCompany(context);
-    await SubscriptionManager().load();
+   // await SubscriptionManager().refresh();
   }
 
   // ── Load company from Isar ────────────────────────────────

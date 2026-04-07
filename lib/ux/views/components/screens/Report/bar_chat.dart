@@ -50,7 +50,8 @@ class BarChart extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 3),
-                AnimatedContainer(
+          RepaintBoundary(
+            child:AnimatedContainer(
                   duration: const Duration(milliseconds: 600),
                   height: 120 * barHeight,
                   decoration: BoxDecoration(
@@ -60,7 +61,7 @@ class BarChart extends StatelessWidget {
                     borderRadius: const BorderRadius.vertical(
                         top: Radius.circular(4)),
                   ),
-                ),
+                )),
                 const SizedBox(height: 4),
                 Text(
                   _dayLabel(d.date),

@@ -165,42 +165,7 @@ class ConfigField extends StatelessWidget {
             )
                 : null,
           ),
-      // decoration: InputDecoration(
-      //   hintText: hintText,
-      //   hintStyle: TextStyle(color: Colors.grey[400]),
-      //   border: OutlineInputBorder(
-      //     borderRadius: BorderRadius.circular(8),
-      //   ),
-      //   enabledBorder: OutlineInputBorder(
-      //     borderRadius: BorderRadius.circular(8),
-      //     borderSide: BorderSide(color: Colors.grey.shade300),
-      //   ),
-      //   focusedBorder: OutlineInputBorder(
-      //     borderRadius: BorderRadius.circular(8),
-      //     borderSide: const BorderSide(color: Colors.blue, width: 2),
-      //   ),
-      //   errorBorder: OutlineInputBorder(
-      //     borderRadius: BorderRadius.circular(8),
-      //     borderSide: const BorderSide(color: Colors.red),
-      //   ),
-      //   isDense: true,
-      //   filled: true,
-      //   fillColor: enabled ? Colors.white : Colors.grey[100],
-      //   contentPadding: const EdgeInsets.symmetric(
-      //     horizontal: 12,
-      //     vertical: 14,
-      //   ),
-      //   suffixIcon: showVisibilityToggle
-      //       ? IconButton(
-      //     icon: Icon(
-      //       obscureText ? Icons.visibility_off : Icons.visibility,
-      //       color: Colors.grey[600],
-      //       size: 20,
-      //     ),
-      //     onPressed: onToggleVisibility,
-      //   )
-      //       : null,
-      // ),
+
       validator: validator,
         ));
   }
@@ -216,6 +181,7 @@ class InputField extends StatefulWidget {
   final bool enabled;
   final bool obscureText;
   final bool showVisibilityToggle;
+  final Function(String)? onChanged;
   final VoidCallback? onToggleVisibility;
   final TextInputType? keyboardType;
   final int? maxLength;
@@ -228,6 +194,7 @@ class InputField extends StatefulWidget {
     required this.prexIcon,
     this.validator,
     this.enabled = true,
+    this.onChanged,
     this.obscureText = false,
     this.showVisibilityToggle = false,
     this.onToggleVisibility,
@@ -270,6 +237,7 @@ class _InputFieldState extends State<InputField> {
           keyboardType: widget.keyboardType,
           cursorColor: AppColors.primaryColor,
           maxLength: widget.maxLength,
+          onChanged: widget.onChanged,
           style: TextStyle(
             fontSize: (ScreenUtil.height * 0.02).clamp(10, 14),
             fontWeight: FontWeight.normal,

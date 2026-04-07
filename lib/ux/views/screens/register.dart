@@ -107,12 +107,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         child: Column(
                           children: [
                         Center(
+                        child:RepaintBoundary(
                         child: SvgPicture.asset(
                         AppDrawables.darkLogoSVG,
                           width: 100,
                           height: 50,
                           fit: BoxFit.fitWidth,
-                        ),),
+                        ),)),
                             SizedBox(height: 4,),
                             // ── Page indicator top label ──────────
 
@@ -145,7 +146,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                         message: "Company Creation Successful",
                                         context: context,
                                       );
-                                      AppNavigator.gotoLogin(context: context);
+                                      AppNavigator.gotoLogin(context: context,isFromSetUp: true);
                                     },
                                     // final submit on last page
                                   ),
@@ -160,7 +161,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: List.generate(
                                   _totalPages,
-                                      (index) => AnimatedContainer(
+                                      (index) => RepaintBoundary(
+                                        child:AnimatedContainer(
                                     duration: const Duration(milliseconds: 300),
                                     margin: const EdgeInsets.symmetric(
                                       horizontal: 5,
@@ -173,7 +175,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                           : Colors.white.withOpacity(0.4),
                                       borderRadius: BorderRadius.circular(5),
                                     ),
-                                  ),
+                                        )  ),
                                 ),
                               ),
                             ),

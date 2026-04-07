@@ -205,7 +205,8 @@ Row(
       GestureDetector(
         onTap: () =>
             setState(() => isActive = !isActive),
-        child: AnimatedContainer(
+        child:RepaintBoundary(
+          child: AnimatedContainer(
           duration:
           const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(
@@ -246,7 +247,7 @@ Row(
               ),
             ],
           ),
-        ),
+        )),
       ),
     ],),),
 
@@ -272,7 +273,8 @@ Row(
               return Expanded(
                 child: GestureDetector(
                   onTap: () => setState(() => selectedRole = role),
-                  child: AnimatedContainer(
+                  child:RepaintBoundary(
+                    child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     margin: EdgeInsets.only(
                       right: role == UserRole.cashier ? 0 : 8,
@@ -302,7 +304,7 @@ Row(
                             : Colors.black,
                       ),
                     ),
-                  ),
+                  )),
                 ),
               );
             }).toList(),
@@ -328,17 +330,17 @@ Row(
                   text: isLoading ? AppStrings.saving : AppStrings.save,
                   btnColor: AppColors.secondaryColor,
                   action: () async {
-                    if(!widget.isSetUp){
-                      final canAdd = await SubscriptionManager().canAddUser();
-                      if (!canAdd) {
-                        AppUtil.toastMessage(
-                          message: 'User limit reached (${SubscriptionManager().maxUsers}). Upgrade your plan.',
-                          context: context,
-                          backgroundColor: Colors.red,
-                        );
-                        return;
-                      }
-                    }
+                    // if(!widget.isSetUp){
+                    //   final canAdd = await SubscriptionManager().canAddUser();
+                    //   if (!canAdd) {
+                    //     AppUtil.toastMessage(
+                    //       message: 'User limit reached (${SubscriptionManager().maxUsers}). Upgrade your plan.',
+                    //       context: context,
+                    //       backgroundColor: Colors.red,
+                    //     );
+                    //     return;
+                    //   }
+                    // }
                     createUser();
                   },
                 ),

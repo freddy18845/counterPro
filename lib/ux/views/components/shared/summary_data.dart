@@ -293,7 +293,8 @@ class _SummaryDataState extends State<SummaryData> {
       child: Row(
         children: [
           const SizedBox(width: 8),
-          SvgPicture.asset(AppDrawables.rateSVG, height: 16),
+          RepaintBoundary(
+              child:  SvgPicture.asset(AppDrawables.rateSVG, height: 16)),
           const SizedBox(width: 8),
 
           if (isDesktop)

@@ -207,11 +207,12 @@ class _NumPadState extends State<NumPad> {
     }
 
     if (value == "back") {
-      return SvgPicture.asset(
+      return RepaintBoundary(
+        child: SvgPicture.asset(
         AppDrawables.clearSVG,
         height: 20,
        // color: textColor,
-      );
+        )  );
     }
 
     return Text(

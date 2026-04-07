@@ -77,12 +77,13 @@ class _TransactionCardState extends State<TransactionCard> {
                       ),
 
                       child: Center(
-                        child: SvgPicture.asset(
+                        child: RepaintBoundary(
+                          child:SvgPicture.asset(
                           widget.item.icon,
                           // Remove fit: BoxFit.fitHeight if you want strict height/width control
                           height: (ScreenUtil.height * 0.03),
                           width: (ScreenUtil.height * 0.03),
-                        ),
+                          )  ),
                       ),
                     ),
                   ),

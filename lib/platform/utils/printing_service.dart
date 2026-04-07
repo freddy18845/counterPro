@@ -179,7 +179,8 @@ class PrinterManager {
           bytes += generator.feed(1);
         }
       }
-    } catch (_) {
+    } catch (e) {
+      print(e);
       // logo not available — skip
     }
 

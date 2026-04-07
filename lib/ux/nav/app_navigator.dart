@@ -7,9 +7,10 @@ import 'package:eswaini_destop_app/ux/views/screens/report.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:page_transition/page_transition.dart';
-
 import '../blocs/screens/login/bloc.dart';
 import '../blocs/screens/splash/bloc.dart';
+import '../utils/shared/performance_monitor.dart';
+import '../utils/shared/subscriptionManger.dart';
 import '../views/screens/config_settings.dart';
 import '../views/screens/login.dart';
 import '../views/screens/inventory.dart';
@@ -17,6 +18,7 @@ import '../views/screens/sales.dart';
 import '../views/screens/saved_orders.dart';
 import '../views/screens/register.dart';
 import '../views/screens/set_up.dart';
+import '../views/screens/subscrition_screen.dart';
 import '../views/screens/transactions.dart';
 
 class AppNavigator {
@@ -51,7 +53,7 @@ class AppNavigator {
     required String routId,
   }) async {
     final Widget child;
-
+    PerformanceMonitor.logMemory("$routId Screen");
 
     if (newBlocs.isEmpty) {
       // No blocs needed → push screen directly (no MultiBlocProvider)
@@ -78,12 +80,13 @@ class AppNavigator {
 
   // ── Navigation Methods ─────────────────────────────────────────────────────
 
-  static Future gotoLogin({required BuildContext context}) => _pushNav(
+  static Future gotoLogin({required BuildContext context,    bool isFromSetUp = false, } ) => _pushNav(
     context: context,
+
     newBlocs: [
       (context) => BlocProvider<LoginBloc>(create: (_) => LoginBloc()),
     ],
-    screen: const LoginScreen(),
+    screen: LoginScreen(isFromSetUp:isFromSetUp ,),
     routId: login,
   );
 
@@ -172,6 +175,17 @@ class AppNavigator {
   );
 
 
+  // static void gotoSubscriptionExpired({
+  //   required BuildContext context,
+  //   required SubscriptionCheckResult result,
+  // }) {
+  //   Navigator.pushReplacement(
+  //     context,
+  //     MaterialPageRoute(
+  //       builder: (_) => SubscriptionExpiredScreen(result: result),
+  //     ),
+  //   );
+  // }
 
   static Future gotoConfigSettings({required BuildContext context}) => _pushNav(
     context: context,

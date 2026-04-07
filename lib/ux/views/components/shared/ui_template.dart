@@ -1,7 +1,5 @@
 import 'dart:io';
 import 'dart:ui';
-
-import 'package:eswaini_destop_app/ux/utils/sessionManager.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
@@ -48,6 +46,7 @@ class _BaseTemplateState extends State<BaseTemplate> with WindowListener {
 
     // Only set this after context exists
     WidgetsBinding.instance.addPostFrameCallback((_) {
+
       // Use the global navigator key from main.dart
       // You need to import main.dart or access it through a global variable
       if (navigatorKey.currentContext != null) {

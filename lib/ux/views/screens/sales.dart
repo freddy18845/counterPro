@@ -6,6 +6,7 @@ import "../../../platform/utils/constant.dart";
 import "../../../platform/utils/isar_manager.dart";
 import "../../models/shared/category.dart";
 import "../../models/shared/product.dart";
+import "../../utils/shared/tax_manager.dart";
 import "../components/screens/sales/left_side.dart";
 import "../components/screens/sales/right_side.dart";
 import "../components/shared/ui_template.dart";
@@ -126,15 +127,25 @@ class _SalesScreenState extends State<SalesScreen> {
 
   double get _subtotal => _cart.fold(0, (sum, item) => sum + item.total);
 
-  double get _tax => _subtotal * 0.15;
 
   double get _grandTotal => _subtotal + _tax;
+
+
+
+  double get _tax {
+    // ← TaxManager handles enabled/disabled and rate
+    return TaxManager().calculateTax(_subtotal);
+  }
+
+  double get _total {
+    return TaxManager().calculateTotal(_subtotal);
+  }
 
   @override
   Widget build(BuildContext context) {
     return BaseTemplate(
       contentSection:
-     Container(child:  Row(
+     Row(
        crossAxisAlignment: CrossAxisAlignment.start,
        children: [
          // ── Left: Product Search + Grid ───────────────
@@ -176,7 +187,7 @@ class _SalesScreenState extends State<SalesScreen> {
          },
          ),
        ],
-     ),),
+     ),
     );
   }
 }

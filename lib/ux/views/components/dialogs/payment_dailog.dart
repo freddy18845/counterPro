@@ -3,7 +3,6 @@ import 'package:eswaini_destop_app/platform/utils/isar_manager.dart';
 import 'package:eswaini_destop_app/ux/models/shared/pos_transaction.dart';
 import 'package:eswaini_destop_app/ux/models/shared/product.dart';
 import 'package:eswaini_destop_app/ux/models/shared/sale_order.dart';
-import 'package:eswaini_destop_app/ux/res/app_theme.dart';
 import 'package:eswaini_destop_app/ux/utils/sessionManager.dart';
 import 'package:eswaini_destop_app/ux/utils/shared/app.dart';
 import 'package:flutter/material.dart';
@@ -210,7 +209,8 @@ class _PaymentDialogState extends State<PaymentDialog> {
                   child: GestureDetector(
                     onTap: () =>
                         setState(() => _selectedMethod = method),
-                    child: AnimatedContainer(
+                    child:RepaintBoundary(
+                      child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       margin: const EdgeInsets.only(right: 8),
                       padding: const EdgeInsets.symmetric(
@@ -248,7 +248,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
                           ),
                         ],
                       ),
-                    ),
+                    ),)
                   ),
                 );
               }).toList(),

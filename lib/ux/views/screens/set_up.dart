@@ -33,7 +33,7 @@ class _SetupChoiceScreenState extends State<SetupChoiceScreen> {
       resizeToAvoidBottomInset: false,
       extendBody: true,
       extendBodyBehindAppBar: true,
-     bottomNavigationBar:  supportInfo(),
+     bottomNavigationBar:  setUpSupportInfo(),
       body:Container(
         height: double.infinity,
         width: double.infinity,
@@ -63,12 +63,13 @@ class _SetupChoiceScreenState extends State<SetupChoiceScreen> {
             children: [
               const SizedBox(height: 16),
               // ── Logo ────────────────────────────────────
-              SvgPicture.asset(
+          RepaintBoundary(
+            child:  SvgPicture.asset(
                 AppDrawables.logoSVG,
                 width: 100,
                 height: 40,
                 fit: BoxFit.fitWidth,
-              ),
+              )),
               const SizedBox(height: 8),
               Text(
                 'Your Number One Point of Sale Solution',
@@ -101,7 +102,8 @@ class _SetupChoiceScreenState extends State<SetupChoiceScreen> {
                       child: GestureDetector(
                         onTap: () =>
                             setState(() => _mode = mode),
-                        child: AnimatedContainer(
+                        child: RepaintBoundary(
+                          child:AnimatedContainer(
                           duration:
                           const Duration(milliseconds: 250),
                           padding: const EdgeInsets.symmetric(
@@ -127,7 +129,7 @@ class _SetupChoiceScreenState extends State<SetupChoiceScreen> {
                                   .withValues(alpha: 0.8),
                             ),
                           ),
-                        ),
+                        )),
                       ),
                     );
                   }).toList(),

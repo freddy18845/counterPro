@@ -272,7 +272,9 @@ class _CreateCompanyState extends State<CreateCompany> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: _pickedLogo != null
-                  ? Image.file(_pickedLogo!, fit: BoxFit.cover)
+                  ? Image.file(_pickedLogo!, fit: BoxFit.cover,cacheWidth: 200,   // ← resize in memory to reduce RAM
+                cacheHeight: 200,
+                filterQuality: FilterQuality.low,)
                   : Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: const [

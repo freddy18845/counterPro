@@ -186,7 +186,8 @@ class _SalesCartSectionState extends State<SalesCartSection> {
 
           // ── Receipt box ───────────────────────────────────
           Expanded(
-            child: AnimatedContainer(
+            child: RepaintBoundary(
+              child:AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
@@ -275,12 +276,13 @@ class _SalesCartSectionState extends State<SalesCartSection> {
                         mainAxisAlignment:
                         MainAxisAlignment.center,
                         children: [
-                          SvgPicture.asset(
+                        RepaintBoundary(
+    child:  SvgPicture.asset(
                             AppDrawables.emptyReceiptSVG,
                             width: 100,
                             height: 40,
                             fit: BoxFit.fitWidth,
-                          ),
+    )  ),
                           const SizedBox(height: 16),
                           Text(
                             'Cart is Empty',
@@ -295,6 +297,9 @@ class _SalesCartSectionState extends State<SalesCartSection> {
                         : ListView.separated(
                       padding: EdgeInsets.zero,
                       itemCount: widget.cart.length,
+                      addRepaintBoundaries: true,   // ← isolates repaints
+                      addAutomaticKeepAlives: false, // ← don't keep off-screen items alive
+                      cacheExtent: 200,
                       separatorBuilder: (_, __) => Divider(
                         height: 1,
                         color: Colors.grey
@@ -347,7 +352,7 @@ class _SalesCartSectionState extends State<SalesCartSection> {
                                               ),
                                         ),
                                         Container(
-                                          width: 22,
+                                          width: 28,
                                           padding:
                                           const EdgeInsets
                                               .symmetric(
@@ -361,7 +366,7 @@ class _SalesCartSectionState extends State<SalesCartSection> {
                                             style:
                                             const TextStyle(
                                                 fontSize:
-                                                11),
+                                                12),
                                           ),
                                         ),
                                         _QtyBtn(
@@ -435,7 +440,7 @@ class _SalesCartSectionState extends State<SalesCartSection> {
                   ],
                 ],
               ),
-            ),
+            )),
           ),
 
           const SizedBox(height: 10),
@@ -529,8 +534,8 @@ class _QtyBtn extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 18,
-        height: 18,
+        width: 22,
+        height: 22,
         decoration: BoxDecoration(
           color: AppColors.primaryColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(4),

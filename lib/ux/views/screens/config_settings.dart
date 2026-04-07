@@ -17,7 +17,7 @@ import "../components/shared/ui_template.dart";
 enum ConfigTab {
   company,
   users,
-   subscription,
+  // subscription,
   importExport,
   apiSync,
 }
@@ -46,7 +46,7 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
   String _tabLabel(ConfigTab t) => switch (t) {
     ConfigTab.company => 'Company',
     ConfigTab.users => 'Users',
-    ConfigTab.subscription => 'Subscription',
+   // ConfigTab.subscription => 'Subscription',
     ConfigTab.importExport => 'Import / Export',
     ConfigTab.apiSync => 'API & Sync',
   };
@@ -54,7 +54,7 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
   IconData _tabIcon(ConfigTab t) => switch (t) {
     ConfigTab.company => Icons.business_outlined,
     ConfigTab.users => Icons.people_outlined,
-    ConfigTab.subscription => Icons.workspace_premium_outlined,
+    //ConfigTab.subscription => Icons.workspace_premium_outlined,
     ConfigTab.importExport => Icons.import_export_outlined,
     ConfigTab.apiSync => Icons.cloud_sync_outlined,
   };
@@ -82,7 +82,8 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
                         final isActive = _activeTab == tab;
                         return GestureDetector(
                           onTap: () => setState(() => _activeTab = tab),
-                          child: AnimatedContainer(
+                          child:RepaintBoundary(
+                            child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
                             margin: const EdgeInsets.only(right: 8),
                             padding: const EdgeInsets.symmetric(
@@ -122,7 +123,7 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
                                 ),
                               ],
                             ),
-                          ),
+                          )),
                         );
                       }).toList(),
                     ),
@@ -175,7 +176,7 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
               child: switch (_activeTab) {
                 ConfigTab.company => CompanyTab(),
                 ConfigTab.users => UsersTab(isar: isar),
-                ConfigTab.subscription => const SubscriptionTab(),
+               // ConfigTab.subscription => const SubscriptionTab(),
                 ConfigTab.importExport => ImportExportTab(isar: isar),
                 ConfigTab.apiSync => const ApiSyncTab(),
               },

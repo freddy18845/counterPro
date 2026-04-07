@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:eswaini_destop_app/ux/utils/shared/api_config.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 import '../models/shared/api_response.dart';
 
 class ApiService {
@@ -193,6 +194,8 @@ class AuthApiService {
     return response;
   }
 
+
+
   Future<ApiResponse<Map<String, dynamic>>>
   refreshToken() async {
     return _api.post('/auth/refresh', {});
@@ -217,5 +220,93 @@ class AuthApiService {
     debugPrint('🔑 Validate data: ${response.data}');
 
     return response;
+  }
+
+
+
+
+  Future<Map<String, dynamic>?> initializePayment({
+    required double amount,
+    required String email,
+  }) async {
+    final url = Uri.parse("https://smartcarpark.top/api/payments/initializeCounterProPayment");
+
+    print("📡 Initializing payment with:");
+    print("   URL: $url");
+    print("   Amount: $amount");
+    print("   Email: $email");
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: jsonEncode({
+          "amount": amount,
+          "email": email,
+        }),
+      ).timeout(const Duration(seconds: 30));
+
+      print("📥 Response status: ${response.statusCode}");
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print("📦 Response body: $data");
+
+        if (data['success'] == true) {
+          print("✅ Payment initialization successful");
+          return data['data']; // contains authorization_url
+        } else {
+          print("❌ Payment initialization failed: ${data['message']}");
+          return null;
+        }
+      } else if (response.statusCode == 404) {
+        print("❌ API endpoint not found (404)");
+        print("   Please check if the URL is correct:");
+        print("   $url");
+        return null;
+      } else {
+        print("❌ HTTP Error ${response.statusCode}: ${response.body}");
+        return null;
+      }
+    } catch (e) {
+      print("❌ Network error: $e");
+      return null;
+    }
+  }
+
+
+
+  Future<void> openPaymentPage(String url) async {
+    final uri = Uri.parse(url);
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      throw "Could not launch payment page";
+    }
+  }
+
+  Future<bool> verifyPayment(String reference) async {
+    final url = Uri.parse(
+        "https://smartcarpark.top/api/payments/verifyCounterProPayment?reference=$reference");
+
+    try {
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        return data['success'] == true;
+      }
+
+      return false;
+
+    } catch (e) {
+      print("Verification error: $e");
+      return false;
+    }
   }
 }

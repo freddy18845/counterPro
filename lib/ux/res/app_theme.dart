@@ -1,11 +1,9 @@
-import "package:eswaini_destop_app/ux/models/shared/pos_transaction.dart";
+
 import "package:flutter/material.dart";
 import "../../platform/utils/constant.dart";
-import "../models/shared/sale_order.dart";
 import "../utils/sessionManager.dart";
 import "../utils/shared/screen.dart";
 import "app_colors.dart";
-import "app_drawables.dart";
 import "app_strings.dart";
 
 class AppTheme {

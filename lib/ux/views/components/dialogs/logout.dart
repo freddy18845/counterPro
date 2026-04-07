@@ -26,11 +26,11 @@ class _LogoutDialogState extends State<LogoutDialog> {
         title: AppStrings.logoutText,
         titleSize: 20,
         showCard: true,
+        cardHeight: 230,
         onClose: () {
           Navigator.pop(context);
         },
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
               width: double.infinity,

@@ -3,6 +3,7 @@ import "package:flutter_svg/flutter_svg.dart";
 import "package:flutter/cupertino.dart";
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
+import "../../../platform/utils/cached_image.dart";
 import "../../blocs/screens/splash/bloc.dart";
 import "../../res/app_drawables.dart";
 import "../../res/app_strings.dart";
@@ -22,13 +23,17 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     splashBloc = context.read<SplashBloc>();
-
+   loadImages();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       splashBloc.add(SplashInitEvent(context: context));
     });
     super.initState();
   }
 
+  loadImages() async {
+
+    await precacheAppImages(context);
+  }
   @override
   Widget build(BuildContext context) {
     ScreenUtil.init(context: context);
@@ -53,12 +58,13 @@ class _SplashScreenState extends State<SplashScreen> {
                 children: [
                   Spacer(),
                   Center(
-                    child: SvgPicture.asset(
+                    child:RepaintBoundary(
+                      child: SvgPicture.asset(
                       AppDrawables.logoSVG,
                       width: 150,
                       height: 70,
                       fit: BoxFit.fitWidth,
-                    ),
+                      )),
                   ),
                   SizedBox(height: ScreenUtil.height * 0.1),
                   CupertinoActivityIndicator(radius: 18, color: Colors.white),

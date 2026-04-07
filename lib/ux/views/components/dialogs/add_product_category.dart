@@ -1,5 +1,4 @@
 import "dart:async";
-import "package:eswaini_destop_app/platform/utils/constant.dart";
 import "package:eswaini_destop_app/platform/utils/isar_manager.dart";
 import "package:eswaini_destop_app/ux/models/shared/category.dart";
 import "package:eswaini_destop_app/ux/models/shared/product.dart";
@@ -91,16 +90,16 @@ class _AddEditProductDialogState extends State<AddEditProductDialog> {
     }
 
     setState(() => _isLoading = true);
-    final canAdd = await SubscriptionManager().canAddProduct();
-    if (!canAdd) {
-      AppUtil.toastMessage(
-        message: 'Product limit reached (${SubscriptionManager().maxProducts}). Upgrade your plan.',
-        context: context,
-        backgroundColor: Colors.red,
-      );
-      setState(() => _isLoading = false);
-      return;
-    }
+    // final canAdd = await SubscriptionManager().canAddProduct();
+    // if (!canAdd) {
+    //   AppUtil.toastMessage(
+    //     message: 'Product limit reached (${SubscriptionManager().maxProducts}). Upgrade your plan.',
+    //     context: context,
+    //     backgroundColor: Colors.red,
+    //   );
+    //   setState(() => _isLoading = false);
+    //   return;
+    // }
     final product = _isEditMode ? widget.product! : Product();
 
     product
@@ -351,7 +350,8 @@ class _AddEditProductDialogState extends State<AddEditProductDialog> {
                       GestureDetector(
                         onTap: () =>
                             setState(() => _isActive = !_isActive),
-                        child: AnimatedContainer(
+                        child:RepaintBoundary(
+                          child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 10),
@@ -390,7 +390,7 @@ class _AddEditProductDialogState extends State<AddEditProductDialog> {
                               ),
                             ],
                           ),
-                        ),
+                        )),
                       ),
                     ],
                   ),

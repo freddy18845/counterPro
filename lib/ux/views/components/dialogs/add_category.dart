@@ -121,7 +121,7 @@ class _AddEditCategoryDialogState extends State<AddEditCategoryDialog> {
         title: _isEditMode ? 'Edit Category' : 'Add Category',
         showCard: true,
         titleSize: 18,
-        cardHeight: 370,
+        cardHeight: 390,
         cardWidth: 480,
         onClose: () => Navigator.pop(context),
         child: Form(
@@ -166,7 +166,8 @@ class _AddEditCategoryDialogState extends State<AddEditCategoryDialog> {
                   const SizedBox(width: 16),
                   GestureDetector(
                     onTap: () => setState(() => _isActive = !_isActive),
-                    child: AnimatedContainer(
+                    child:RepaintBoundary(
+                      child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 14,
@@ -202,7 +203,7 @@ class _AddEditCategoryDialogState extends State<AddEditCategoryDialog> {
                           ),
                         ],
                       ),
-                    ),
+                    )),
                   ),
                 ],
               ),

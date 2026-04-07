@@ -1,74 +1,65 @@
-// ─────────────────────────────────────────────────────────────
-// ── TAX SETTINGS FORM ─────────────────────────────────────────
-// ─────────────────────────────────────────────────────────────
 import 'package:eswaini_destop_app/platform/utils/constant.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import '../../../../res/app_colors.dart';
 import '../../../../utils/shared/app.dart';
+import '../../../../utils/shared/tax_manager.dart';
 import '../../shared/btn.dart';
 import '../../shared/login_input.dart';
 
 class TaxSettingsForm extends StatefulWidget {
+  const TaxSettingsForm({super.key});
+
   @override
   State<TaxSettingsForm> createState() => TaxSettingsFormState();
 }
 
 class TaxSettingsFormState extends State<TaxSettingsForm> {
-  final _formKey = GlobalKey<FormState>();
-  final _taxController = TextEditingController();
+  final _formKey        = GlobalKey<FormState>();
+  final _taxController  = TextEditingController();
   final _taxNameController = TextEditingController();
 
   bool _taxEnabled = false;
-  bool _isLoading = false;
-  bool _isSaving = false;
-
-  // prefs keys
-  static const _keyTaxEnabled = 'tax_enabled';
-  static const _keyTaxRate = 'tax_rate';
-  static const _keyTaxName = 'tax_name';
+  bool _isLoading  = false;
+  bool _isSaving   = false;
 
   @override
   void initState() {
     super.initState();
-    _loadTaxSettings();
+    _loadFromManager();
   }
 
-  Future<void> _loadTaxSettings() async {
+  // ── Load from TaxManager (already loaded in main) ─────────
+  void _loadFromManager() {
     setState(() => _isLoading = true);
-    final prefs = await SharedPreferences.getInstance();
+    final tm = TaxManager();
     setState(() {
-      _taxEnabled = prefs.getBool(_keyTaxEnabled) ?? true;
-      _taxController.text =
-          (prefs.getDouble(_keyTaxRate) ?? 0.0)
-              .toStringAsFixed(2);
-      _taxNameController.text =
-          prefs.getString(_keyTaxName) ?? 'VAT';
+      _taxEnabled = tm.taxEnabled;
+      _taxController.text = tm.taxRate.toStringAsFixed(2);
+      _taxNameController.text = tm.taxName;
       _isLoading = false;
     });
   }
 
+  // ── Save via TaxManager ───────────────────────────────────
   Future<void> _saveTaxSettings() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isSaving = true);
 
-    final prefs = await SharedPreferences.getInstance();
-    final rate =
-        double.tryParse(_taxController.text.trim()) ?? 0.0;
+    final rate = double.tryParse(
+        _taxController.text.trim()) ?? 0.0;
 
-    await prefs.setBool(_keyTaxEnabled, _taxEnabled);
-    await prefs.setDouble(_keyTaxRate, rate);
-    await prefs.setString(
-        _keyTaxName, _taxNameController.text.trim());
+    await TaxManager().save(
+      enabled: _taxEnabled,
+      rate:    rate,
+      name:    _taxNameController.text.trim(),
+    );
 
     setState(() => _isSaving = false);
 
     if (mounted) {
       AppUtil.toastMessage(
-        message: '✅ Tax settings saved',
+        message:
+        '✅ Tax settings saved — ${TaxManager().taxLabel}',
         context: context,
         backgroundColor: Colors.green,
       );
@@ -87,9 +78,7 @@ class TaxSettingsFormState extends State<TaxSettingsForm> {
     if (_isLoading) {
       return Center(
         child: CircularProgressIndicator(
-          color: AppColors.primaryColor,
-          strokeWidth: 2,
-        ),
+            color: AppColors.primaryColor, strokeWidth: 2),
       );
     }
 
@@ -106,7 +95,7 @@ class TaxSettingsFormState extends State<TaxSettingsForm> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Enable/disable tax ────────────────────
+            // ── Enable/disable toggle ─────────────────
             Row(
               mainAxisAlignment:
               MainAxisAlignment.spaceBetween,
@@ -125,40 +114,45 @@ class TaxSettingsFormState extends State<TaxSettingsForm> {
                     ),
                     Text(
                       _taxEnabled
-                          ? 'Tax is applied to all transactions'
+                          ? 'Tax applied to all transactions'
                           : 'No tax on transactions',
                       style: const TextStyle(
                           fontSize: 11, color: Colors.grey),
                     ),
                   ],
                 ),
-                GestureDetector(
-                  onTap: () =>
-                      setState(() => _taxEnabled = !_taxEnabled),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    width: 50,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: _taxEnabled
-                          ? AppColors.primaryColor
-                          : Colors.grey.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: AnimatedAlign(
+                RepaintBoundary(
+                  child: GestureDetector(
+                    onTap: () => setState(
+                            () => _taxEnabled = !_taxEnabled),
+                    child: AnimatedContainer(
                       duration:
                       const Duration(milliseconds: 200),
-                      alignment: _taxEnabled
-                          ? Alignment.centerRight
-                          : Alignment.centerLeft,
-                      child: Container(
-                        width: 22,
-                        height: 22,
-                        margin: const EdgeInsets.symmetric(
-                            horizontal: 3),
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
+                      width: 50,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: _taxEnabled
+                            ? AppColors.primaryColor
+                            : Colors.grey
+                            .withValues(alpha: 0.3),
+                        borderRadius:
+                        BorderRadius.circular(14),
+                      ),
+                      child: AnimatedAlign(
+                        duration:
+                        const Duration(milliseconds: 200),
+                        alignment: _taxEnabled
+                            ? Alignment.centerRight
+                            : Alignment.centerLeft,
+                        child: Container(
+                          width: 22,
+                          height: 22,
+                          margin: const EdgeInsets.symmetric(
+                              horizontal: 3),
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
                         ),
                       ),
                     ),
@@ -174,6 +168,7 @@ class TaxSettingsFormState extends State<TaxSettingsForm> {
               opacity: _taxEnabled ? 1.0 : 0.4,
               duration: const Duration(milliseconds: 200),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     crossAxisAlignment:
@@ -232,7 +227,7 @@ class TaxSettingsFormState extends State<TaxSettingsForm> {
                               },
                             ),
 
-                            // preview
+                            // live preview
                             if (_taxEnabled) ...[
                               const SizedBox(height: 6),
                               Builder(builder: (context) {
@@ -262,64 +257,65 @@ class TaxSettingsFormState extends State<TaxSettingsForm> {
 
                   // quick presets
                   if (_taxEnabled) ...[
-                    const Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'Quick presets:',
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey),
-                      ),
+                    const Text(
+                      'Quick presets:',
+                      style: TextStyle(
+                          fontSize: 12, color: Colors.grey),
                     ),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
+                      runSpacing: 8,
                       children: [0, 5, 10, 12.5, 15, 20]
                           .map((rate) {
-                        final label = rate ==
-                            rate.toInt()
-                            ? '${rate.toInt()}%'
-                            : '$rate%';
+                        final rateDouble =
+                        rate.toDouble();
+                        final label = rateDouble ==
+                            rateDouble.toInt()
+                            ? '${rateDouble.toInt()}%'
+                            : '$rateDouble%';
+                        final formatted =
+                        rateDouble.toStringAsFixed(2);
                         final isSelected =
-                            _taxController.text ==
-                                rate.toStringAsFixed(2);
+                            _taxController.text == formatted;
 
-                        return GestureDetector(
-                          onTap: () => setState(() {
-                            _taxController.text =
-                                rate.toStringAsFixed(2);
-                          }),
-                          child: AnimatedContainer(
-                            duration: const Duration(
-                                milliseconds: 150),
-                            padding:
-                            const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? AppColors.primaryColor
-                                  : Colors.grey
-                                  .withValues(alpha: 0.08),
-                              borderRadius:
-                              BorderRadius.circular(20),
-                              border: Border.all(
+                        return RepaintBoundary(
+                          child: GestureDetector(
+                            onTap: () => setState(() {
+                              _taxController.text = formatted;
+                            }),
+                            child: AnimatedContainer(
+                              duration: const Duration(
+                                  milliseconds: 150),
+                              padding:
+                              const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6),
+                              decoration: BoxDecoration(
                                 color: isSelected
                                     ? AppColors.primaryColor
                                     : Colors.grey.withValues(
-                                    alpha: 0.3),
+                                    alpha: 0.08),
+                                borderRadius:
+                                BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? AppColors.primaryColor
+                                      : Colors.grey.withValues(
+                                      alpha: 0.3),
+                                ),
                               ),
-                            ),
-                            child: Text(
-                              label,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: isSelected
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                                color: isSelected
-                                    ? Colors.white
-                                    : Colors.grey,
+                              child: Text(
+                                label,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  color: isSelected
+                                      ? Colors.white
+                                      : Colors.grey,
+                                ),
                               ),
                             ),
                           ),
@@ -333,16 +329,14 @@ class TaxSettingsFormState extends State<TaxSettingsForm> {
 
             const SizedBox(height: 20),
 
-            // ── info banner ───────────────────────────
+            // ── Info banner ───────────────────────────
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color:
-                Colors.amber.withValues(alpha: 0.08),
+                color: Colors.amber.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                    color: Colors.amber
-                        .withValues(alpha: 0.3)),
+                    color: Colors.amber.withValues(alpha: 0.3)),
               ),
               child: const Row(
                 children: [
@@ -354,8 +348,7 @@ class TaxSettingsFormState extends State<TaxSettingsForm> {
                       'Tax changes apply to new transactions only. '
                           'Existing transactions are not affected.',
                       style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.black87),
+                          fontSize: 11, color: Colors.black87),
                     ),
                   ),
                 ],
@@ -364,12 +357,13 @@ class TaxSettingsFormState extends State<TaxSettingsForm> {
 
             const SizedBox(height: 20),
 
-            // ── save button ───────────────────────────
+            // ── Save button ───────────────────────────
             SizedBox(
-              width: 160,
+              width: 180,
               child: ColorBtn(
-                text:
-                _isSaving ? 'Saving...' : 'Save Tax Settings',
+                text: _isSaving
+                    ? 'Saving...'
+                    : 'Save Tax Settings',
                 btnColor: AppColors.secondaryColor,
                 action: _isSaving ? (){} : _saveTaxSettings,
               ),

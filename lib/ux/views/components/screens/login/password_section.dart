@@ -1,3 +1,5 @@
+import "dart:io";
+
 import "package:eswaini_destop_app/platform/utils/isar_manager.dart";
 import "package:eswaini_destop_app/ux/models/shared/pos_user.dart";
 import "package:eswaini_destop_app/ux/models/shared/transaction.dart";
@@ -9,12 +11,14 @@ import "package:flutter/services.dart";
 import "package:flutter_animate/flutter_animate.dart";
 import "package:flutter_svg/svg.dart";
 import "package:isar/isar.dart";
+import "package:window_manager/window_manager.dart";
 import "../../../../../platform/utils/constant.dart";
 import "../../../../blocs/screens/login/bloc.dart";
 import "../../../../res/app_colors.dart";
 import "../../../../res/app_drawables.dart";
 import "../../../../utils/remember_me.dart";
 import "../../../../utils/sessionManager.dart";
+import "../../../../utils/setup_checker.dart";
 import "../../../../utils/shared/api_config.dart";
 import "../../../fragements/configSetting/sync_service.dart";
 import "../../dialogs/force_password_change.dart";
@@ -29,6 +33,7 @@ class LoginPasswordSection extends StatefulWidget {
   final LoginBloc loginBloc;
   final String subText;
   final bool isLoading;
+  final bool isFromSetUp;
   final TextEditingController emailController;
   final TextEditingController passwordController;
   final void Function(String value) onSetValue;
@@ -41,6 +46,7 @@ class LoginPasswordSection extends StatefulWidget {
     required this.emailController,
     required this.passwordController,
     required this.onSetValue,
+    this.isFromSetUp = false
   });
 
   @override
@@ -298,12 +304,13 @@ class _State extends State<LoginPasswordSection> {
             Center(
               child:Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
-                child: SvgPicture.asset(
+                child:RepaintBoundary(
+                    child: SvgPicture.asset(
                 AppDrawables.darkLogoSVG,
                 width: 90,
                 height: 50,
                 fit: BoxFit.fitWidth,
-                ) ),
+                ) )),
             ),
 Divider(thickness: 0.8,color: Colors.grey,),
             // title
@@ -379,7 +386,8 @@ Divider(thickness: 0.8,color: Colors.grey,),
                       },
                       child: Row(
                         children: [
-                          AnimatedContainer(
+                          RepaintBoundary(
+                              child:   AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
                             width: 18,
                             height: 16,
@@ -402,7 +410,7 @@ Divider(thickness: 0.8,color: Colors.grey,),
                               color: Colors.white,
                             )
                                 : null,
-                          ),
+                          )),
                           const SizedBox(width: 6),
                           const Text(
                             'Remember me',
@@ -582,8 +590,21 @@ Divider(thickness: 0.8,color: Colors.grey,),
                     child: ColorBtn(
                       text: AppStrings.cancel,
                       btnColor: AppColors.red,
-                      action: () {
-                        SystemChannels.platform.invokeMethod<void>('SystemNavigator.pop');
+                      action: () async {
+
+                        if (widget.isFromSetUp) {
+                          // ← go to choice screen not setup directly
+                          Navigator.pop(context);
+                        }else{
+                          if(!Platform.isWindows){
+                            SystemChannels.platform.invokeMethod<void>('SystemNavigator.pop');
+                          }
+                          else{
+                            await windowManager.destroy();
+                          }
+
+                        }
+
                       },
                     ),
                   ),

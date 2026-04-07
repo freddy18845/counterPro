@@ -22,7 +22,17 @@ class CategoriesTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<Category>>(
-      stream: isar.categorys.where().watch(fireImmediately: true),
+      stream: isar.categorys
+          .where()
+          .watch(fireImmediately: true)
+          .distinct((a, b) {
+        if (a.length != b.length) return false;
+        for (int i = 0; i < a.length; i++) {
+          if (a[i].id != b[i].id ||
+              a[i].updatedAt != b[i].updatedAt) return false;
+        }
+        return true;
+      }),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Center(child: CupertinoActivityIndicator(radius: 12, color: Colors.grey));
@@ -47,6 +57,9 @@ class CategoriesTable extends StatelessWidget {
               child: ListView.builder(
                 padding: EdgeInsets.symmetric(vertical: 2),
                 itemCount: paged.length,
+                addRepaintBoundaries: true,   // ← isolates repaints
+                addAutomaticKeepAlives: false, // ← don't keep off-screen items alive
+                cacheExtent: 200,
                 itemBuilder: (context, index) {
                   final c = paged[index];
                   return InventoryTableRow(

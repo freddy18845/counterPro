@@ -122,7 +122,8 @@ class InventoryTableRow extends StatelessWidget {
                     onCategoryEdit!(category!);
                   }
                 },
-                child: AnimatedContainer(
+                child:RepaintBoundary(
+                  child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   padding: const EdgeInsets.symmetric(
                       horizontal: 10, vertical: 5),
@@ -155,7 +156,7 @@ class InventoryTableRow extends StatelessWidget {
                   ),
                 ),
               ),
-            ),
+              ) ),
 
           // ── Header spacer to align with edit column ──────
           if (isHeader)

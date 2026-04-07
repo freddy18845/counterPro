@@ -440,7 +440,8 @@ isDesktop: isDesktop,
                       const SizedBox(width: 8),
                       GestureDetector(
                         onTap: isLoading ? null : _refresh,
-                        child: AnimatedContainer(
+                        child:RepaintBoundary(
+                          child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 8),
@@ -463,7 +464,7 @@ isDesktop: isDesktop,
                             color: AppColors.primaryColor,
                           ),
                         ),
-                      ),
+                        ) ),
                       const SizedBox(width: 8),
                     ],
                   ),

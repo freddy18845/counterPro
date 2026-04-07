@@ -28,6 +28,8 @@ class _MessageDialogState extends State<MessageDialog> {
         title:widget. title,
         titleSize: 20,
         showCard: true,
+        cardHeight: 230,
+
         onClose: () {
           Navigator.pop(context);
         },

@@ -13,12 +13,13 @@ Widget buildCompanyLogo() {
 
   // 1. Fallback to SVG if null or empty
   if (logoPath == null || logoPath.isEmpty) {
-    return  SvgPicture.asset(
+    return RepaintBoundary(
+        child: SvgPicture.asset(
       AppDrawables.darkLogoSVG,
       width: logoWidth,
       height: logoHeight,
       fit: BoxFit.fill,
-    );
+        )  );
   }
 
   // 2. Handle Network Image
@@ -38,5 +39,8 @@ Widget buildCompanyLogo() {
     width: logoWidth,
     height: logoHeight,
     fit: BoxFit.fill,
+    cacheWidth: 200,   // ← resize in memory to reduce RAM
+    cacheHeight: 200,
+    filterQuality: FilterQuality.low,
   );
 }

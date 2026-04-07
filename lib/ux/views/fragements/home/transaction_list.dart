@@ -61,7 +61,8 @@ class _ScrollableTransactionsRowState
             controller: _controller,
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
-            child: Row(
+            child:RepaintBoundary(
+              child: Row(
               children:
               ConstantUtil.options.asMap().entries.map((entry) {
                 int index = entry.key;
@@ -99,7 +100,7 @@ class _ScrollableTransactionsRowState
                 );
               }).toList(),
             ),
-          ),
+            ) ),
 
           /// ⬅ LEFT ARROW
           Positioned(

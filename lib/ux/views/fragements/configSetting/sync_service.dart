@@ -18,6 +18,7 @@ import 'package:eswaini_destop_app/ux/utils/sessionManager.dart';
 import '../../../res/app_colors.dart';
 import '../../../utils/api_service.dart';
 import '../../../utils/shared/api_config.dart';
+import '../../../utils/shared/subscriptionManger.dart';
 
 class SyncService {
   static final SyncService _instance = SyncService._internal();
@@ -79,7 +80,10 @@ class SyncService {
       _lastSyncTime = DateTime.now();
       await _saveLastSyncTime();
       await _markSetupDone();
-
+     // await SubscriptionManager().refresh();
+      _lastSyncTime = DateTime.now();
+      await _saveLastSyncTime();
+      await _markSetupDone();
       _log('First time setup complete!');
     } catch (e) {
       result = SyncResult(
@@ -540,10 +544,15 @@ class SyncService {
           ..slogan = data['slogan'] as String?
           ..email = data['email'] ?? company.email
           ..address = data['address'] ?? company.address
+
           ..contactOne = data['contactOne'] ?? company.contactOne
           ..contactTwo = data['contactTwo'] ?? company.contactTwo
           ..updatedAt = DateTime.now();
+        company.subscriptionPlan =
+            _parsePlan(data['subscriptionPlan']);
 
+        company.subscriptionStatus =
+            _parseStatus(data['subscriptionStatus']);
         if (existing == null) {
           company.createdAt = DateTime.now();
         }
@@ -993,5 +1002,30 @@ class SyncService {
     if (str != null) {
       _lastSyncTime = DateTime.tryParse(str);
     }
+  }
+}
+SubscriptionPlan _parsePlan(dynamic val) {
+  switch (val?.toString()) {
+    case 'pro':
+      return SubscriptionPlan.pro;
+    case 'enterprise':
+      return SubscriptionPlan.enterprise;
+    default:
+      return SubscriptionPlan.basic;
+  }
+}
+
+SubscriptionStatus _parseStatus(dynamic val) {
+  switch (val?.toString()) {
+    case 'active':
+      return SubscriptionStatus.active;
+    case 'expired':
+      return SubscriptionStatus.expired;
+    case 'cancelled':
+      return SubscriptionStatus.cancelled;
+    case 'trial':
+      return SubscriptionStatus.trial;
+    default:
+      return SubscriptionStatus.expired;
   }
 }

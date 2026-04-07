@@ -3,6 +3,7 @@ import "package:flutter_bloc/flutter_bloc.dart";
 import "../../../nav/app_navigator.dart";
 import "../../../utils/setup_checker.dart";
 import "../../../utils/shared/api_config.dart";
+import "../../../utils/shared/subscriptionManger.dart";
 import "../../../views/fragements/configSetting/sync_service.dart";
 
 
@@ -36,7 +37,18 @@ class SplashBloc extends Bloc<SplashEvent, SplashState> {
       AppNavigator.gotoSetUp(context: context);
       return;
     }
-
+    // final subResult = await SubscriptionManager.checkSubscription();
+    //
+    // if (subResult.isExpired) {
+    //   // ← subscription expired — show blocking screen
+    //   if (context.mounted) {
+    //     AppNavigator.gotoSubscriptionExpired(
+    //       context: context,
+    //       result:  subResult,
+    //     );
+    //   }
+    //   return;
+    // }
     // setup done — check if sync needed on startup
     final syncEnabled = await ApiConfig.isSyncEnabled();
     if (syncEnabled) {
@@ -52,7 +64,6 @@ class SplashBloc extends Bloc<SplashEvent, SplashState> {
         );
       });
     }
-
     AppNavigator.gotoLogin(context: context);
   }
 }

@@ -134,6 +134,9 @@ class _SalesLeftSectionState extends State<SalesLeftSection> {
                               child: ListView.separated(
                                 shrinkWrap: true,
                                 itemCount: widget.filteredProducts.length,
+                                addRepaintBoundaries: true,   // ← isolates repaints
+                                addAutomaticKeepAlives: false, // ← don't keep off-screen items alive
+                                cacheExtent: 200,
                                 separatorBuilder: (_, __) => Divider(
                                   height: 1,
                                   color: Colors.grey.withOpacity(0.15),
@@ -272,7 +275,8 @@ class _SalesLeftSectionState extends State<SalesLeftSection> {
                                   FocusScope.of(context).unfocus();
                                   widget.onAddToCart(p);
                                 }, // ✅ FIXED
-                          child: AnimatedContainer(
+                          child:RepaintBoundary(
+                            child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
@@ -333,7 +337,7 @@ class _SalesLeftSectionState extends State<SalesLeftSection> {
                                       ),
                                     ],
                                   ),
-                          ),
+                          )),
                         );
                       },
                     ),

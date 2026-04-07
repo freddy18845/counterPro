@@ -77,7 +77,8 @@ class HomeRightSection extends StatelessWidget {
           ),
 
           Expanded(
-            child: AnimatedContainer(
+            child: RepaintBoundary(
+              child:AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               decoration: BoxDecoration(
@@ -269,11 +270,12 @@ class HomeRightSection extends StatelessWidget {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                SvgPicture.asset(
+    RepaintBoundary(
+    child: SvgPicture.asset(
                                   AppDrawables.emptyReceiptSVG,
                                   width: 100,
                                   height: 40,
-                                ),
+                                )),
                                 const SizedBox(height: 16),
                                 const Text(
                                   'No receipt yet',
@@ -357,7 +359,7 @@ class HomeRightSection extends StatelessWidget {
                 ],
               ),
             ),
-          ),
+          )),
 
           // ── Print button ──────────────────────────────────
           Padding(

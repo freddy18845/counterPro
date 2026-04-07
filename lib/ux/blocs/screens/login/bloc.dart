@@ -118,25 +118,4 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
     fieldController?.close();
   }
 
-  // Future<TransactionQueryResponse> getTransactionHistory(
-  //     StoredUser activeUser) async {
-  //   final now = DateTime.now();
-  //   final yesterday = now.subtract(const Duration(days: 1));
-  //   final today = DateTime(now.year, now.month, now.day);
-  //   final startDate = DateTime(yesterday.year, yesterday.month, yesterday.day);
-  //   final endDate = DateTime(today.year, today.month, today.day, 23, 59, 59);
-  //
-  //   final dmc = activeUser.accessLevel == "3" ? '001' : '000';
-  //
-  //   final TransactionQueryResponse transactionQueryResponse =
-  //       await repo.fetchTransactionsFromAPI(startDate, endDate, dmc);
-  //
-  //   final List<Map<String, dynamic>> transactions =
-  //       transactionQueryResponse.queryResult;
-  //   if (transactionQueryResponse.responseCode == "00") {
-  //    // TransactionManager().addTransactionHistoryFromAPI(transactions);
-  //   }
-  //
-  //   return transactionQueryResponse;
-  // }
 }

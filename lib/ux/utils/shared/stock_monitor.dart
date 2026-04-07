@@ -7,8 +7,11 @@ import 'package:eswaini_destop_app/ux/utils/sessionManager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:isar/isar.dart';
-
+import 'package:windows_notification/notification_message.dart';
+import 'package:windows_notification/windows_notification.dart';
 import '../../../platform/utils/isar_manager.dart';
+import '../../views/components/dialogs/windows_notification_popup.dart';
+import 'app.dart';
 
 class StockMonitorService {
   static final isar = IsarService.db;
@@ -33,7 +36,8 @@ class StockMonitorService {
   // Stream for out of stock count
   static final StreamController<int> _outOfStockCountController =
   StreamController<int>.broadcast();
-
+  static final WindowsNotification _winNotifyPlugin =
+  WindowsNotification(applicationId: "com.example.counterpro");
   static int _currentOutOfStockCount = 0;
 
   // Global context for showing dialogs on Windows
@@ -74,6 +78,7 @@ class StockMonitorService {
 
     // Android, macOS, Linux initialization
     if (!Platform.isWindows) {
+
       const android = AndroidInitializationSettings('@mipmap/ic_launcher');
       const darwin = DarwinInitializationSettings();
       const linux = LinuxInitializationSettings(
@@ -315,7 +320,15 @@ class StockMonitorService {
     // Platform-specific notification handling
     if (Platform.isWindows) {
       // Show dialog for Windows
-      await _showWindowsDialog(title, body, product);
+
+      NotificationMessage message =
+         NotificationMessage.fromPluginTemplate(
+           "$title\n",
+        "stock_${productId}", // unique id
+        "${product?.name ?? 'Product'} is running low (${product?.stockQuantity ?? 0} left)",
+      );
+
+      _winNotifyPlugin.showNotificationPluginTemplate(message);
     } else if (Platform.isAndroid) {
       const androidDetails = AndroidNotificationDetails(
         'stock_channel',
@@ -345,15 +358,6 @@ class StockMonitorService {
         body,
         details,
       );
-    } else if (Platform.isLinux) {
-      const linuxDetails = LinuxNotificationDetails();
-      final details = NotificationDetails(linux: linuxDetails);
-      await _notifications.show(
-        DateTime.now().millisecondsSinceEpoch ~/ 1000,
-        title,
-        body,
-        details,
-      );
     }
     }else {
       // fallback → silent log or badge update
@@ -362,161 +366,7 @@ class StockMonitorService {
   }
 
   // In stock_monitor.dart
-  static Future<void> _showWindowsDialog(String title, String body, Product? product) async {
-    // Check if a dialog is already showing to prevent multiple popups
-    if (_isDialogShowing) return;
 
-    // Check if we have a valid context
-    if (_globalContext == null) {
-      print("Windows Alert: $title - $body");
-      print("No global context set. Make sure to call StockMonitorService.setGlobalContext()");
-      return;
-    }
-
-    // Check if context is still valid
-    if (!_globalContext!.mounted) {
-      print("Context is not mounted. Cannot show dialog.");
-      return;
-    }
-
-    _isDialogShowing = true;
-
-    try {
-      // Use WidgetsBinding to ensure we're on the right frame
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_globalContext != null && _globalContext!.mounted && !_isDialogShowing) {
-          showDialog(
-            context: _globalContext!,
-            barrierDismissible: false,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: Row(
-                  children: [
-                    Icon(
-                      title.contains("Out of Stock")
-                          ? Icons.error_outline
-                          : Icons.warning_amber_rounded,
-                      color: title.contains("Out of Stock")
-                          ? Colors.red
-                          : Colors.orange,
-                      size: 28,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: TextStyle(
-                          color: title.contains("Out of Stock")
-                              ? Colors.red
-                              : Colors.orange,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(body, style: const TextStyle(fontSize: 14)),
-                    const SizedBox(height: 12),
-                    if (product != null) ...[
-                      const Divider(),
-                      const SizedBox(height: 8),
-                      Text(
-                        "Product Details:",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text("• Current Stock: ${product.stockQuantity}"),
-                      Text("• Threshold: ${product.lowStockThreshold}"),
-                      if (product.stockQuantity <= 0)
-                        const Text(
-                          "• Status: OUT OF STOCK",
-                          style: TextStyle(
-                            color: Colors.red,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        )
-                      else if (product.stockQuantity <= product.lowStockThreshold)
-                        const Text(
-                          "• Status: LOW STOCK",
-                          style: TextStyle(
-                            color: Colors.orange,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                    ],
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.info_outline, size: 16, color: Colors.blue.shade700),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              "This product requires immediate attention",
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.blue.shade700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      _isDialogShowing = false;
-                    },
-                    child: const Text("Later"),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      _isDialogShowing = false;
-                      // Navigate to product details
-                      if (_globalContext != null && product != null) {
-                        // Add your navigation logic here
-                        print("View product: ${product.name}");
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: title.contains("Out of Stock")
-                          ? Colors.red
-                          : Colors.orange,
-                    ),
-                    child: const Text("View Product"),
-                  ),
-                ],
-              );
-            },
-          ).then((_) {
-            _isDialogShowing = false;
-          });
-        } else {
-          _isDialogShowing = false;
-        }
-      });
-    } catch (e) {
-      print("Error showing Windows dialog: $e");
-      _isDialogShowing = false;
-    }
-  }
 
   static void stop() {
     _timer?.cancel();

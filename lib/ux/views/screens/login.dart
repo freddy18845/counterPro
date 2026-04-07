@@ -1,21 +1,26 @@
+import "dart:io";
 import "dart:ui";
 
 import "package:flutter/material.dart";
 import "package:flutter/services.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
 import "package:isar/isar.dart";
+import "package:window_manager/window_manager.dart";
 import "../../../platform/utils/isar_manager.dart";
 import "../../blocs/screens/login/bloc.dart";
 import "../../models/shared/pos_user.dart";
 import "../../nav/app_navigator.dart";
 import "../../res/app_drawables.dart";
 import "../../res/app_strings.dart";
+import "../../utils/shared/app.dart";
 import "../../utils/shared/screen.dart";
+import "../components/dialogs/message.dart";
 import "../components/screens/login/password_section.dart";
 import "../components/shared/footer.dart";
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final bool isFromSetUp;
+  const LoginScreen({super.key, this.isFromSetUp=false});
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
@@ -24,7 +29,9 @@ class _LoginScreenState extends State<LoginScreen> {
   late LoginBloc loginBloc;
   bool isLoading = false;
   bool obscurePassword = true;
-  final _formKey = GlobalKey<FormState>();
+
+
+
   final isar = IsarService().isar;
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
@@ -49,11 +56,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDesktop = ScreenUtil.width >= 900;
     return Scaffold(
         resizeToAvoidBottomInset: false,
         extendBody: true,
         extendBodyBehindAppBar: true,
-        bottomNavigationBar: supportInfo(),
+        bottomNavigationBar:isDesktop? supportInfo():setUpSupportInfo(),
         body: Container(
           height: double.infinity,
           width: double.infinity,
@@ -93,8 +101,23 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         alignment: Alignment.center,
                         child:  IconButton(
-                          onPressed: () {
-                            SystemChannels.platform.invokeMethod<void>('SystemNavigator.pop');
+                          onPressed: () async {
+                          bool result =   await AppUtil.displayDialog(
+                              dismissible: false,
+                              context: context,
+                              child: MessageDialog(title: 'Confirm Exit',message: 'Are You Sure You Quit the Application?',),
+                            );
+
+                          if(result){
+                            if(  !Platform.isWindows){
+                              SystemChannels.platform.invokeMethod<void>('SystemNavigator.pop');
+                            }
+                            else{
+                              await windowManager.destroy();
+                            }
+                          }
+
+
                           },
                           icon: Icon(
                             Icons.power_settings_new_rounded,
@@ -115,6 +138,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             section = LoginPasswordSection(
                               key: UniqueKey(),
                               isLoading: isLoading,
+                              isFromSetUp:widget.isFromSetUp ,
                               loginBloc: loginBloc,
                               emailController: emailController,
                               passwordController: passwordController,

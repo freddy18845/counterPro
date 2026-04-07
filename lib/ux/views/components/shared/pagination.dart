@@ -104,7 +104,8 @@ class _PNum extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => onTap(page),
-      child: AnimatedContainer(
+      child:RepaintBoundary(
+        child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         margin: const EdgeInsets.symmetric(horizontal: 3),
         width: 32,
@@ -129,7 +130,7 @@ class _PNum extends StatelessWidget {
             ),
           ),
         ),
-      ),
+      )),
     );
   }
 }

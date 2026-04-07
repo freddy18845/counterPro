@@ -43,10 +43,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
   final TextEditingController _searchController = TextEditingController();
   final isar = IsarService.db;
   final FocusNode focusNode = FocusNode();
-
+  List<Category> _categories = [];
   InventoryView _activeView = InventoryView.products;
   Category? _selectedCategory;
-  List<Category> _categories = [];
+
   bool isLoading = false;
 
   // Add stock filter
@@ -59,7 +59,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
   @override
   void initState() {
     super.initState();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      setState(() {
+        _activeView =_categories!=[]? InventoryView.products:InventoryView.categories;
+      });
       focusNode.requestFocus();
 
       if(widget.isLowStock!=null){
@@ -180,7 +184,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
                             _selectedCategory = null;
                           }
                         }),
-                        child: AnimatedContainer(
+                        child: RepaintBoundary(
+                          child:AnimatedContainer(
                           duration: const Duration(milliseconds: 250),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 20, vertical: 8),
@@ -203,7 +208,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              AnimatedContainer(
+                          RepaintBoundary(
+                          child: AnimatedContainer(
                                 duration:
                                 const Duration(milliseconds: 250),
                                 width: 16,
@@ -230,7 +236,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                   ),
                                 )
                                     : null,
-                              ),
+                          )),
                               const SizedBox(width: 8),
                               Text(
                                 label,
@@ -246,7 +252,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                               ),
                             ],
                           ),
-                        ),
+                        )),
                       );
                     }).toList(),
                   ),

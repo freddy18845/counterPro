@@ -308,7 +308,11 @@ class _SavedOrdersScreenState extends State<SavedOrdersScreen> {
               child: StreamBuilder<List<SaleOrder>>(
                 stream: isar.saleOrders
                     .where()
-                    .watch(fireImmediately: true),
+                    .watch(fireImmediately: true)
+                    .distinct((a, b) {
+                  if (a.length != b.length) return false;
+                  return true;
+                }),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) {
                     return const Center(
