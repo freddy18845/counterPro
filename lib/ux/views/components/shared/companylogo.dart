@@ -11,36 +11,45 @@ Widget buildCompanyLogo() {
   const double logoWidth = 130;
   const double logoHeight = 50;
 
-  // 1. Fallback to SVG if null or empty
-  if (logoPath == null || logoPath.isEmpty) {
-    return RepaintBoundary(
-        child: SvgPicture.asset(
+  Widget _fallbackLogo() => RepaintBoundary(
+    child: SvgPicture.asset(
       AppDrawables.darkLogoSVG,
       width: logoWidth,
       height: logoHeight,
-      fit: BoxFit.fill,
-        )  );
+      fit: BoxFit.contain,
+    ),
+  );
+
+  // 1. Fallback
+  if (logoPath == null || logoPath.isEmpty) {
+    return _fallbackLogo();
   }
 
-  // 2. Handle Network Image
-  if (logoPath.startsWith('http') || logoPath.startsWith('https')) {
+  // 2. Network
+  if (logoPath.startsWith('http')) {
     return Image.network(
       logoPath,
       width: logoWidth,
       height: logoHeight,
-      fit: BoxFit.fill,
+      fit: BoxFit.contain,
+      errorBuilder: (_, __, ___) => _fallbackLogo(),
+      loadingBuilder: (context, child, progress) =>
+      progress == null ? child : const CupertinoActivityIndicator(),
     );
   }
 
-  // 3. Handle Local File Path
-  final cleanPath = logoPath.replaceAll("file://", "");
+  // 3. Local File
+  final cleanPath = logoPath.replaceFirst('file://', '');
+  final file = File(cleanPath);
+
   return Image.file(
-    File(cleanPath),
+    file,
     width: logoWidth,
     height: logoHeight,
-    fit: BoxFit.fill,
-    cacheWidth: 200,   // ← resize in memory to reduce RAM
+    fit: BoxFit.contain,
+    cacheWidth: 200,
     cacheHeight: 200,
     filterQuality: FilterQuality.low,
+    errorBuilder: (_, __, ___) => _fallbackLogo(),
   );
 }

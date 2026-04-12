@@ -1,3 +1,16 @@
+buildscript {
+    val kotlinVersion = "1.9.24"
+
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath("com.android.tools.build:gradle:8.5.0")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
+    }
+}
 
 allprojects {
     repositories {
@@ -6,29 +19,36 @@ allprojects {
     }
 }
 
-// ← force all subprojects to use the same Kotlin version
+// === STRONG FIX FOR isar_flutter_libs lStar error ===
 subprojects {
     configurations.all {
         resolutionStrategy {
-            force("org.jetbrains.kotlin:kotlin-stdlib:1.9.22")
-            force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.22")
-            force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.22")
-            force("org.jetbrains.kotlin:kotlin-reflect:1.9.22")
-            force("org.jetbrains.kotlin:kotlin-compiler-embeddable:1.9.22")
+            force("androidx.core:core:1.13.1")
+            force("androidx.core:core-ktx:1.13.1")
+            force("androidx.appcompat:appcompat:1.7.0")
+            force("org.jetbrains.kotlin:kotlin-stdlib:1.9.24")
         }
     }
 }
 
+// Your custom build directory settings
 val newBuildDir: Directory = rootProject.layout.buildDirectory.dir("../../build").get()
-rootProject.layout.buildDirectory.value(newBuildDir)
+rootProject.layout.buildDirectory.set(newBuildDir)
 
 subprojects {
     val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
-    layout.buildDirectory.value(newSubprojectBuildDir)
+    layout.buildDirectory.set(newSubprojectBuildDir)
 }
 
 subprojects {
-    project.evaluationDependsOn(":app")
+    afterEvaluate {
+        if (project.hasProperty("android")) {
+            val android = project.extensions.getByName("android")
+            if (android is com.android.build.gradle.LibraryExtension) {
+                android.compileSdk = 35
+            }
+        }
+    }
 }
 
 tasks.register<Delete>("clean") {

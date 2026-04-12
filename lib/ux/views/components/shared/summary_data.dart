@@ -103,7 +103,7 @@ class _SummaryDataState extends State<SummaryData> {
   // =========================
   Widget _buildLeftAction(bool isDesktop) {
     if (widget.isHomeScreen) {
-      return sessionManager.isCashier
+      return sessionManager.isCashier || sessionManager.isManager
           ? _actionButton(
               icon: AppDrawables.profileSVG,
               label: AppStrings.profile,

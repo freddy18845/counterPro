@@ -24,7 +24,13 @@ Future<void> main() async {
   PaintingBinding.instance.imageCache.maximumSize = 50;
   PaintingBinding.instance.imageCache.maximumSizeBytes =
       20 * 1024 * 1024;
-
+if(Platform.isAndroid){
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.white12,
+    statusBarIconBrightness: Brightness.light,   // Light icons (white)
+    // statusBarIconBrightness: Brightness.dark, // For light background
+  ));
+}
   if(Platform.isWindows){
     // Must add this line
     await windowManager.ensureInitialized();

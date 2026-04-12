@@ -53,6 +53,7 @@ class _ScrollableTransactionsRowState
 
   @override
   Widget build(BuildContext context) {
+    final options = ConstantUtil.options;
     return  Stack(
         alignment: Alignment.center,
         children: [
@@ -61,10 +62,8 @@ class _ScrollableTransactionsRowState
             controller: _controller,
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
-            child:RepaintBoundary(
-              child: Row(
-              children:
-              ConstantUtil.options.asMap().entries.map((entry) {
+            child: Row(
+              children: options.asMap().entries.map((entry) {
                 int index = entry.key;
                 var item = entry.value;
 
@@ -73,34 +72,21 @@ class _ScrollableTransactionsRowState
                   child: InkWell(
                     onTap: () async {
                       widget.onSelect(item.text);
-
-                      await Future.delayed(
-                          const Duration(milliseconds: 100));
-
-                      widget.homeBloc.add(
-                        HomeBaseSecStartFlow(item: item),
-                      );
+                      await Future.delayed(const Duration(milliseconds: 100));
+                      widget.homeBloc.add(HomeBaseSecStartFlow(item: item));
                     },
                     child: TransactionCard(
                       item: item,
                       title: widget.selectedTransaction,
-                    )
-                        .animate()
-                        .fadeIn(
-                      delay:
-                      Duration(milliseconds: 150 * index),
+                    ).animate().fadeIn(
+                      delay: Duration(milliseconds: 150 * index),
                       duration: 500.ms,
-                    )
-                        .slideY(
-                      begin: 0.2,
-                      end: 0,
-                      curve: Curves.easeOutQuad,
-                    ),
+                    ).slideY(begin: 0.2, end: 0),
                   ),
                 );
               }).toList(),
             ),
-            ) ),
+          ),
 
           /// ⬅ LEFT ARROW
           Positioned(

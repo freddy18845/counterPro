@@ -1,13 +1,7 @@
-import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
-import 'package:bluetooth_print/bluetooth_print.dart';
-import 'package:bluetooth_print/bluetooth_print_model.dart';
 import 'package:esc_pos_utils/esc_pos_utils.dart';
-import 'package:flutter/services.dart';
-import 'package:image/image.dart' as img;
-import 'package:intl/intl.dart';
+import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart' as pos_printer;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../ux/models/shared/sale_order.dart';
@@ -20,105 +14,114 @@ class PrinterManager {
   factory PrinterManager() => _instance;
   PrinterManager._internal();
 
-  // Windows USB Channel
-  static const MethodChannel _windowsChannel = MethodChannel('usb_printer_windows');
+  // ✅ Correctly references the package, not this file
+  final _posPrinter = pos_printer.PrinterManager.instance;
 
-  // Bluetooth
-  final BluetoothPrint _bluetooth = BluetoothPrint.instance;
+  pos_printer.PrinterDevice? _connectedDevice;
+  pos_printer.PrinterType? _printerType;
 
-  String? _windowsPrinterName;
-  bool _bluetoothConnected = false;
-  BluetoothDevice? _connectedBluetoothDevice;
+  bool get isConnected => _connectedDevice != null;
+  String get connectionType => _printerType == pos_printer.PrinterType.usb
+      ? 'usb'
+      : _printerType == pos_printer.PrinterType.bluetooth
+      ? 'bluetooth'
+      : '';
 
-  String _connectionType = ''; // 'usb' or 'bluetooth'
+  bool get hasThermalPrinter =>
+      _printerType == pos_printer.PrinterType.usb && _connectedDevice != null;
 
-  bool get isConnected => _connectionType.isNotEmpty;
-  String get connectionType => _connectionType;
+  // ====================== DISCOVERY ======================
 
-  /// Auto select best printer (Thermal USB first)
-  Future<Map<String, dynamic>?> autoSelectBestPrinter() async {
-    // 1. Windows Thermal Printer First (Priority)
-    if (Platform.isWindows) {
-      final printers = await getWindowsPrinters();
-
-      if (printers.isNotEmpty) {
-        // Try to find best thermal printer
-        String? bestPrinter = _findBestThermalPrinter(printers);
-
-        if (bestPrinter != null) {
-          await connectWindowsPrinter(bestPrinter);
-          print('✅ Auto-selected Thermal Printer: $bestPrinter');
-          return {'type': 'usb', 'name': bestPrinter};
-        } else if (printers.isNotEmpty) {
-          // Use first printer if no clear thermal found
-          await connectWindowsPrinter(printers.first);
-          print('✅ Auto-selected Windows Printer: ${printers.first}');
-          return {'type': 'usb', 'name': printers.first};
-        }
-      }
-    }
-
-    // 2. Fallback to Bluetooth (only on mobile)
-    if (Platform.isAndroid || Platform.isIOS) {
-      print('ℹ️ No Windows printer found, falling back to Bluetooth...');
-      // You can auto scan here if you want
-    }
-
-    return null;
-  }
-
-  /// Helper: Try to detect thermal printer by name
-  String? _findBestThermalPrinter(List<String> printers) {
-    final thermalKeywords = [
-      'POS', 'Thermal', 'TM-T', 'Epson', 'Star', '58mm', '80mm',
-      'Receipt', 'Printer-Pos', 'XP', 'TP'
-    ];
-
-    for (var printer in printers) {
-      final name = printer.toUpperCase();
-      if (thermalKeywords.any((keyword) => name.contains(keyword))) {
-        return printer;
-      }
-    }
-    return null;
-  }
-
-  /// Check if we have a connected thermal printer
-  bool get hasThermalPrinter => _connectionType == 'usb' && _windowsPrinterName != null;
-  // ====================== WINDOWS USB ======================
-  Future<List<String>> getWindowsPrinters() async {
+  Future<List<pos_printer.PrinterDevice>> getUsbPrinters() async {
     try {
-      final List<dynamic> result = await _windowsChannel.invokeMethod('getPrinters');
-      return result.cast<String>();
+      final printers = <pos_printer.PrinterDevice>[];
+      await for (final device
+      in _posPrinter.discovery(type: pos_printer.PrinterType.usb)) {
+        printers.add(device);
+      }
+      return printers;
     } catch (e) {
-      print('❌ Failed to get Windows printers: $e');
+      print('❌ Failed to get USB printers: $e');
       return [];
     }
   }
 
-  Future<bool> connectWindowsPrinter(String printerName) async {
-    _windowsPrinterName = printerName;
-    _connectionType = 'usb';
-    _bluetoothConnected = false;
-    print('✅ Connected to Windows Printer: $printerName');
-    return true;
+  Stream<pos_printer.PrinterDevice> scanBluetoothPrinters() {
+    return _posPrinter.discovery(type: pos_printer.PrinterType.bluetooth);
   }
 
-  // ====================== BLUETOOTH ======================
-  Future<bool> connectBluetooth(BluetoothDevice device) async {
+  // ====================== AUTO SELECT ======================
+  Future<Map<String, dynamic>?> autoSelectBestPrinter() async {
+    // 1. Try USB first on ALL platforms
     try {
-      final success = await _bluetooth.connect(device);
-      if (success) {
-        _bluetoothConnected = true;
-        _connectedBluetoothDevice = device;
-        _connectionType = 'bluetooth';
-        _windowsPrinterName = null;
-
-        // Save for auto-reconnect
-        await _savePrinterAddress(device.address ?? '');
-        print('✅ Bluetooth connected: ${device.name}');
+      final printers = await getUsbPrinters(); // works on Android/Windows/Linux too
+      if (printers.isNotEmpty) {
+        final best = _findBestThermalPrinter(printers);
+        final selected = best ?? printers.first;
+        await connectUsbPrinter(selected);
+        print('✅ Auto-selected USB Printer: ${selected.name}');
+        return {'type': 'usb', 'name': selected.name};
       }
-      return success;
+    } catch (e) {
+      print('⚠️ USB discovery failed: $e');
+    }
+
+    // 2. Fallback to Bluetooth on all platforms
+    print('ℹ️ No USB printer found, falling back to Bluetooth...');
+    return null;
+  }
+
+  pos_printer.PrinterDevice? _findBestThermalPrinter(
+      List<pos_printer.PrinterDevice> printers) {
+    const thermalKeywords = [
+      'POS', 'THERMAL', 'TM-T', 'EPSON', 'STAR',
+      '58MM', '80MM', 'RECEIPT', 'PRINTER-POS', 'XP', 'TP',
+    ];
+    for (final device in printers) {
+      final name = (device.name ?? '').toUpperCase();
+      if (thermalKeywords.any((k) => name.contains(k))) return device;
+    }
+    return null;
+  }
+
+  // ====================== CONNECT ======================
+
+  Future<bool> connectUsbPrinter(pos_printer.PrinterDevice device) async {
+    try {
+      await _posPrinter.connect(
+        type: pos_printer.PrinterType.usb,
+        model: pos_printer.UsbPrinterInput(
+          name: device.name ?? '',
+          productId: device.productId,
+          vendorId: device.vendorId,
+        ),
+      );
+      _connectedDevice = device;
+      _printerType = pos_printer.PrinterType.usb;
+      print('✅ Connected to USB Printer: ${device.name}');
+      return true;
+    } catch (e) {
+      print('❌ USB connect error: $e');
+      return false;
+    }
+  }
+
+  Future<bool> connectBluetoothPrinter(pos_printer.PrinterDevice device) async {
+    try {
+      await _posPrinter.connect(
+        type: pos_printer.PrinterType.bluetooth,
+        model: pos_printer.BluetoothPrinterInput(
+          name: device.name ?? '',
+          address: device.address ?? '',
+          isBle: false,
+          autoConnect: false,
+        ),
+      );
+      _connectedDevice = device;
+      _printerType = pos_printer.PrinterType.bluetooth;
+      await _savePrinterAddress(device.address ?? '');
+      print('✅ Connected to Bluetooth Printer: ${device.name}');
+      return true;
     } catch (e) {
       print('❌ Bluetooth connect error: $e');
       return false;
@@ -126,6 +129,7 @@ class PrinterManager {
   }
 
   // ====================== PRINTING ======================
+
   Future<void> printReceipt({
     required SaleOrder order,
     required PosTransaction transaction,
@@ -133,32 +137,16 @@ class PrinterManager {
   }) async {
     if (!isConnected) throw Exception('No printer connected');
 
-    final bytes = await _buildEscPosReceipt(order: order, transaction: transaction, isDuplicate: isDuplicate);
+    final bytes = await _buildEscPosReceipt(
+      order: order,
+      transaction: transaction,
+      isDuplicate: isDuplicate,
+    );
 
-    if (_connectionType == 'usb' && Platform.isWindows) {
-      final success = await _printWindowsRaw(bytes);
-      if (!success) throw Exception('Failed to print on Windows');
-    } else if (_connectionType == 'bluetooth' && _bluetoothConnected) {
-      final list = _buildBluetoothReceipt(order: order, transaction: transaction, isDuplicate: isDuplicate);
-      await _bluetooth.printReceipt({}, list);
-    }
+    await _posPrinter.send(type: _printerType!, bytes: bytes);
+    print('✅ Receipt printed successfully');
   }
 
-  Future<bool> _printWindowsRaw(List<int> bytes) async {
-    if (_windowsPrinterName == null) return false;
-    try {
-      final success = await _windowsChannel.invokeMethod('printBytes', {
-        'printerName': _windowsPrinterName,
-        'bytes': bytes,
-      });
-      return success == true;
-    } catch (e) {
-      print('Windows print error: $e');
-      return false;
-    }
-  }
-
-  // Build ESC/POS Receipt (USB)
   Future<List<int>> _buildEscPosReceipt({
     required SaleOrder order,
     required PosTransaction transaction,
@@ -170,11 +158,36 @@ class PrinterManager {
 
     List<int> bytes = [];
 
-    // Header, Items, Total, etc. (You can expand this)
     bytes += generator.text(
       session.companyName ?? 'CounterPro',
-      styles: const PosStyles(align: PosAlign.center, bold: true, height: PosTextSize.size2),
+      styles: const PosStyles(
+          align: PosAlign.center, bold: true, height: PosTextSize.size2),
     );
+
+    if (isDuplicate) {
+      bytes += generator.text(
+        '*** DUPLICATE ***',
+        styles: const PosStyles(align: PosAlign.center, bold: true),
+      );
+    }
+
+    bytes += generator.hr();
+
+    for (final item in order.items) {
+      bytes += generator.row([
+        PosColumn(text: item.productName, width: 7),
+        PosColumn(text: item.unitPrice.toString(), width: 5,
+            styles: const PosStyles(align: PosAlign.right)),
+      ]);
+    }
+
+    bytes += generator.hr();
+
+     bytes += generator.row([
+      PosColumn(text: 'TOTAL', width: 6, styles: const PosStyles(bold: true)),
+      PosColumn(text: transaction.amountPaid.toString(), width: 6,
+          styles: const PosStyles(align: PosAlign.right, bold: true)),
+    ]);
 
     bytes += generator.feed(3);
     bytes += generator.cut();
@@ -182,32 +195,23 @@ class PrinterManager {
     return bytes;
   }
 
-  // Build Bluetooth Receipt
-  List<LineText> _buildBluetoothReceipt({
-    required SaleOrder order,
-    required PosTransaction transaction,
-    bool isDuplicate = false,
-  }) {
-    // ... your existing bluetooth receipt logic
-    final list = <LineText>[];
-    // Add your receipt lines here
-    return list;
-  }
+  // ====================== HELPERS ======================
 
-  // Save / Load Printer Address
   Future<void> _savePrinterAddress(String address) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('saved_printer', address);
   }
 
-  // Disconnect
   Future<void> disconnect() async {
-    if (_connectionType == 'bluetooth') {
-      await _bluetooth.disconnect();
-      _bluetoothConnected = false;
+    try {
+      if (_printerType != null) {
+        await _posPrinter.disconnect(type: _printerType!);
+      }
+    } catch (e) {
+      print('Disconnect error: $e');
+    } finally {
+      _connectedDevice = null;
+      _printerType = null;
     }
-    _connectionType = '';
-    _windowsPrinterName = null;
-    _connectedBluetoothDevice = null;
   }
 }

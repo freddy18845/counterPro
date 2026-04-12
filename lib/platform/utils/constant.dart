@@ -1,3 +1,5 @@
+import "package:eswaini_destop_app/ux/utils/sessionManager.dart";
+
 import "../../ux/models/screens/home/flow_item.dart";
 import "../../ux/res/app_drawables.dart";
 import "../../ux/res/app_strings.dart";
@@ -27,6 +29,7 @@ class ConstantUtil {
   static const int apiTimeDuration = 120;
 
   static List<HomeFlowItem> options = [
+    if (!SessionManager().isCashier)
     HomeFlowItem(icon: AppDrawables.inventorySVG, text: AppStrings.inventory),
     HomeFlowItem(icon: AppDrawables.salesSVG, text: AppStrings.sales),
 
@@ -35,6 +38,7 @@ class ConstantUtil {
       icon: AppDrawables.transactionSVG,
       text: AppStrings.transactions,
     ),
+    if (!SessionManager().isCashier)
     HomeFlowItem(icon: AppDrawables.reportSVG, text: AppStrings.reports),
   ];
 }

@@ -19,19 +19,29 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   late SplashBloc splashBloc;
+  bool _imagesLoaded = false;
 
   @override
   void initState() {
+    super.initState(); // ✅ Always first
     splashBloc = context.read<SplashBloc>();
-   loadImages();
+
+    // ✅ Delay the event until after the frame is built
     WidgetsBinding.instance.addPostFrameCallback((_) {
       splashBloc.add(SplashInitEvent(context: context));
     });
-    super.initState();
   }
 
-  loadImages() async {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_imagesLoaded) {
+      _imagesLoaded = true; // ✅ Prevent repeated calls
+      loadImages();
+    }
+  }
 
+  Future<void> loadImages() async {
     await precacheAppImages(context);
   }
   @override

@@ -1,10 +1,8 @@
 import "package:eswaini_destop_app/platform/utils/constant.dart";
-import "package:eswaini_destop_app/ux/nav/app_navigator.dart";
 import "package:flutter/material.dart";
 import "../../../res/app_colors.dart";
 import "../../../res/app_strings.dart";
 import "../../../res/app_theme.dart";
-import "../../../utils/sessionManager.dart";
 import "../../../utils/shared/screen.dart";
 import "../shared/base_dailog.dart";
 

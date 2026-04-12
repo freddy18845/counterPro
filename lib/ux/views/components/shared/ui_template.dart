@@ -99,9 +99,7 @@ class _BaseTemplateState extends State<BaseTemplate> with WindowListener {
   Widget build(BuildContext context) {
     return ResponsiveBuilder(
       builder: (context, sizingInformation) {
-        final isDesktop = sizingInformation.deviceScreenType == DeviceScreenType.desktop ||
-            ScreenUtil.width >= 900;
-
+        final isDesktop = sizingInformation.deviceScreenType == DeviceScreenType.desktop ;
         final isTablet = sizingInformation.deviceScreenType == DeviceScreenType.tablet;
         final isMobile = sizingInformation.deviceScreenType == DeviceScreenType.mobile;
 

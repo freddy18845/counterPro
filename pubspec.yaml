@@ -57,6 +57,7 @@ dependencies:
   share_plus: ^10.1.4
   flutter_secure_storage: ^9.2.4
   page_transition: ^2.2.1
+  flutter_pos_printer_platform_image_3: ^1.2.4
   flutter_exit_app: ^1.1.2
   esc_pos_utils: ^1.1.0
   image: ^3.0.2
